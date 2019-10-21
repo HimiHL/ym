@@ -1,0 +1,19 @@
+{
+    "name": "huanghailin/yue-miao",
+    "require": {
+        "guzzlehttp/guzzle": "^6.3",
+        "symfony/console": "^4.3",
+        "vlucas/phpdotenv": "^3.6"
+    },
+    "authors": [
+        {
+            "name": "黄海林",
+            "email": "10000@cxzfb.cn"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}

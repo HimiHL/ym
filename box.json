@@ -1,0 +1,37 @@
+{
+    "alias": "YueMiao.phar",
+    "chmod": "0755",
+    "compactors": [
+        "Herrera\\Box\\Compactor\\Json",
+        "Herrera\\Box\\Compactor\\Php"
+    ],
+    "directories": ["app"],
+    "extract": true,
+    "files": [
+        "artisan",
+        ".env"
+    ],
+    "finder": [
+        {
+            "name": "*.php",
+            "exclude": [
+                "File",
+                "mikey179",
+                "Net",
+                "phpunit",
+                "phpunit-test-case",
+                "Tester",
+                "Tests",
+                "tests",
+                "yaml"
+            ],
+            "in": "vendor"
+        }
+    ],
+    "main": "artisan",
+    "output": "YueMiao.phar",
+    "replacements": {
+        "manifest_url": "https://box-project.github.io/box2/manifest.json"
+    },
+    "stub": true
+}
