@@ -41,13 +41,13 @@ composer install
 ##### 2. 获取成都区可秒杀的医院列表(含预约ID)
 
 ``` shell
-php artisan VaccineList
+php artisan vlist
 ```
 
 ##### 3. 获取当前账号绑定的身份列表(含身份ID)
 
 ```shell
-php artisan MemberList
+php artisan mlist
 ```
 
 ##### 4. 执行秒杀
@@ -56,13 +56,13 @@ php artisan MemberList
 > VaccineId 是指通过2步骤获取的预约ID
 
 ```shell
-php artisan YueMiao <MemberId> <VaccineId>
+php artisan ym <MemberId> <VaccineId>
 ```
 
 ##### 5. 执行秒杀【全套流程，耗时较长】
 
 ```shell
-php artisan NBYueMiao
+php artisan nbym
 ```
 
 
