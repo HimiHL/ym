@@ -42,28 +42,23 @@ class Model
     /**
      * 获取成都区域的部分医院地区
      *
+     * @param bool  $isSeckill
      * @param int   $offset
      * @param int   $limit
      * @param int   $vaccineCode
      * @param int   $regionCode
-     * @param int   $isOpen
-     * @param float $longitude
-     * @param float $latitude
      *
      * @return mixed
      */
-    public function paginate($offset = 0, $limit = 10,$vaccineCode = 8803, $regionCode = 5101, $isOpen = 1, $longitude = '104.06520080566406', $latitude = '30.54224395751953')
+    public function paginate($isSeckill = 0, $vaccineCode = 8803, $regionCode = 5101, $offset = 0, $limit = 10)
     {
         return $this->http('GET', '/base/department/pageList.do', [
+            'isSeckill' => $isSeckill,
             'vaccineCode' => $vaccineCode,
-            'cityName' => '',
             'offset' => $offset,
             'limit' => $limit,
-            'name' => '',
             'regionCode' => $regionCode,
-            'isOpen' => $isOpen,
-            'longitude' => $longitude,
-            'latitude' => $latitude,
+            'isOpen' => 1
         ]);
     }
 
@@ -88,9 +83,17 @@ class Model
      */
     public function vaccineDetail($id)
     {
-        return $this->http('GET', '/seckill/vaccine/detailVo.do', [
-            'id' => $id
-        ]);
+        echo "获取一次秒杀信息-".date('YmdHis')."\n";
+        try {
+            return $this->http('GET', '/seckill/vaccine/detailVo.do', [
+                'id' => $id
+            ]);
+        } catch(RequestException $e) {
+            echo "502，再重试一次-".date('YmdHis')."\n";
+            if (502 == $e->getResponse()->getStatusCode()) {
+                return $this->vaccineDetail($id);
+            }
+        }
     }
 
     /**
@@ -127,6 +130,17 @@ class Model
     public function getVerifyCode()
     {
         return $this->http('GET', '/seckill/validateCode/vcode.do');
+    }
+
+    public function workDays($departmentCode, $vaccineCode, $vaccineId,  $linkManId)
+    {
+        return $this->http('GET', '/order/subscribe/workDays.do', [
+            'depaCode' => $departmentCode,
+            'linkmanId' => $linkManId,
+            'vaccCode' => $vaccineCode,
+            'departmentVaccineId' => $vaccineId,
+            'vaccIndex' => 1
+        ]);
     }
 
     /**

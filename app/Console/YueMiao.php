@@ -17,11 +17,11 @@ class YueMiao extends Command
     protected $requireArgument = [
         [
             'key' => 'MemberId',
-            'intro' => '身份ID，通过php artisan MemberList中提取的`身份ID`字段'
+            'intro' => '身份ID，通过php artisan mlist中提取的`身份ID`字段'
         ],
         [
             'key' => 'VaccineId',
-            'intro' => '预约ID，通过php artisan VaccineList中提取的`预约ID`字段'
+            'intro' => '预约ID，通过php artisan vlist中提取的`预约ID`字段'
         ],
     ];
     protected $optionalArgument = [

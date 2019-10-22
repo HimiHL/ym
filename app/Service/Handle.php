@@ -27,12 +27,12 @@ class Handle
      * 获取所有可秒杀的医院列表
      * 
      */
-    public function getVaccines()
+    public function getVaccines($isSeckill = 1, $vaccineCode = 8803, $regionCode = 5101)
     {
         $offset = 0;
         $list = [];
         do {
-            $response = $this->model->paginate($offset);
+            $response = $this->model->paginate($isSeckill, $vaccineCode, $regionCode, $offset);
             if ($response['code'] == '0000') {
                 if ($offset > $response['data']['total']) {
                     break;
@@ -101,7 +101,7 @@ class Handle
             }
         }
         $date = date('Y-m-d', strtotime($freeDay['day']));// YYYY-mm-dd
-        $index = 0; //不知道含义
+        $index = 1; //不知道含义
 
         return $this->model->submit($id, $index, $memberId, $date, $sign, $verifyCode);
     }
@@ -138,5 +138,11 @@ class Handle
             return $result['data'];
         }
         throw new Exception($result['msg']);
+    }
+
+    public function getWorkDays($departmentCode, $vaccineCode, $vaccineId, $memberId)
+    {
+        $workDays = $this->model->workDays($departmentCode, $vaccineCode, $vaccineId, $memberId);
+        return $workDays['data'] ?? [];
     }
 }

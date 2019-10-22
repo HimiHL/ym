@@ -22,21 +22,57 @@ class NBYueMiao extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
-
+        $vaccineCode = 8803;
         $miao = new Handle;
         // 设置医院预约信息，获取秒杀开始时间
         $vaccineList = $miao->getVaccines();
-        $vaccineIndex = explode('-', $this->chooseAsk('请选择一个预约医院【输入序号】', array_map(function($value, $key) {
-            return sprintf('%s-%s[%s]', $key, $value['name'], $value['vaccines'][0]['vaccine']['startTime']);
-        }, $vaccineList, array_keys($vaccineList))))[0];
+        $headers = [
+            '序号', '预约ID', '医院', '预约时间'
+        ];
+        $rows = [];
+        foreach ($vaccineList as $key => $item) {
+            $rows[] = [
+                $key, $item['vaccines'][0]['vaccine']['id'], $item['name'], $item['vaccines'][0]['vaccine']['startTime']
+            ];
+        }
+        $this->table($headers, $rows);
+        $vaccineIndex = $this->ask('请输入序号: ');
+        // $vaccineIndex = explode('-', $this->chooseAsk('请选择一个预约医院【输入序号】', array_map(function($value, $key) {
+        //     return sprintf('%s-%s[%s]', $key, $value['name'], $value['vaccines'][0]['vaccine']['startTime']);
+        // }, $vaccineList, array_keys($vaccineList))))[0];
         $vaccineId = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['id'];
+        $departmentCode = $vaccineList[$vaccineIndex]['code'];
         $startTime = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['startTime'];
         // 设置需要预约人的信息
         $memberList = $miao->getMemberList();
-        $memberIndex = explode('-', $this->chooseAsk('请选择一个预约人身份信息【输入序号】', array_map(function($value, $key) {
-            return sprintf('%s-%s[%s]', $key, $value['name'], substr_replace($value['idCardNo'], '************', 4, 12));
-        }, $memberList, array_keys($memberList))))[0];
+        $headers = [
+            '序号', '姓名', '身份证号'
+        ];
+        $rows = [];
+        foreach ($memberList as $key => $item) {
+            $rows[] = [
+                $key, $item['name'], substr_replace($item['idCardNo'], '************', 4, 12)
+            ];
+        }
+        $this->table($headers, $rows);
+        $memberIndex = $this->ask('请输入序号: ');
+        // $memberIndex = explode('-', $this->chooseAsk('请选择一个预约人身份信息【输入序号】', array_map(function($value, $key) {
+        //     return sprintf('%s-%s[%s]', $key, $value['name'], substr_replace($value['idCardNo'], '************', 4, 12));
+        // }, $memberList, array_keys($memberList))))[0];
         $memberId = $memberList[$memberIndex]['id'];
+
+        $workDays = $miao->getWorkDays($departmentCode, $vaccineCode, $vaccineId, $memberId);
+        $headers = [
+            '序号', '日期'
+        ];
+        $rows = [];
+        foreach ($workDays['dateList'] as $key => $item) {
+            $rows[] = [
+                $key, $item
+            ];
+        }
+        $this->table($headers, $rows);
+        $date = $this->ask('[调试用，无实际效果]请选择日期[输入序号]: ');
 
         $this->info("您正在为{$memberList[$memberIndex]['name']}预约[{$vaccineList[$vaccineIndex]['name']}]于{$vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['startTime']}的秒杀");
         // 倒计时循环
@@ -61,7 +97,7 @@ class NBYueMiao extends Command
                     if (!$verifyCode) {
                         file_put_contents(__DIR__.'/vcode.jpg', base64_decode($vcode));
                         system('open '.__DIR__.'/vcode.jpg');
-                        $verifyCode = $this->ask('请输入图片验证码');
+                        $verifyCode = $this->ask('请输入图片验证码:');
                     }
                 } else {
                     $output->write("\r<info>距离开始还有{$second}秒<info>");
@@ -77,9 +113,6 @@ class NBYueMiao extends Command
         } catch(\Exception $e) {
             $this->danger($e->getMessage());
         }
-        // $sign = md5(($startTimestamp * 1000 + 220) . 'healthych.com');
-        // $date = '2019-10-25';
-        // $result = $miao->fixedSubmit($vaccineId, $memberId, $verifyCode, $sign, $date);
         $result = $miao->submit($vaccineId, $memberId, $verifyCode, $detail);
         var_dump($result);
     }

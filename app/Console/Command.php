@@ -73,7 +73,7 @@ class Command extends BaseCommand
     }
     public function ask($str)
     {
-        return $this->getHelper('question')->ask($this->input, $this->output, new Question("{$str}\n"));
+        return $this->getHelper('question')->ask($this->input, $this->output, new Question("{$str}"));
     }
 
     public function table($headers, $rows)
