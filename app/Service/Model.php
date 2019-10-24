@@ -107,22 +107,22 @@ class Model
      *
      * @return mixed
      */
-    public function submit($id, $index, $memberID, $date, $sign, $verifyCode)
+    public function submit($id, $index, $memberID, $date, $verifyCode)
     {
-        echo "提交预约一次-".date('YmdHis')."\n";
+        echo "提交预约一次\n";
         try {
             return $this->http('GET', '/seckill/vaccine/subscribe.do', [
                 'departmentVaccineId' => $id,
                 'vaccineIndex' => $index,
                 'linkmanId' => $memberID,
                 'subscribeDate' => $date,
-                'sign' => $sign,
+                // 'sign' => $sign,
                 'vcode' => $verifyCode
             ]);
         } catch(RequestException $e) {
-            echo "秒杀系统502，再重试一次-".date('YmdHis')."\n";
+            echo "秒杀系统502，再重试一次\n";
             if (502 == $e->getResponse()->getStatusCode()) {
-                return $this->submit($id, $index, $memberID, $date, $sign, $verifyCode);
+                return $this->submit($id, $index, $memberID, $date, $verifyCode);
             }
         }
     }
@@ -153,7 +153,7 @@ class Model
         return $this->http('GET', '/order/linkman/findByUserId.do');
     }
 
-    private function http($method = 'POST', $route, $body = [])
+    private function http($method = 'POST', $route, $body = [], $checkResponse = true)
     {
         $result = $this->client->request($method, $route, [
             'verify' => false,
@@ -162,7 +162,7 @@ class Model
         ]);
 
         $data = json_decode($result->getBody()->getContents(), true);
-        if ($data['code'] !== '0000') {
+        if ($checkResponse && $data['code'] !== '0000') {
             throw new Exception($data['msg']);
         }
         return $data;

@@ -77,10 +77,10 @@ class Handle
      * 秒杀
      * 
      */
-    public function fixedSubmit($id, $memberId, $verifyCode, $sign, $date)
+    public function fixedSubmit($id, $memberId, $verifyCode, $date)
     {
         $index = 0; //不知道含义
-        return $this->model->submit($id, $index, $memberId, $date, $sign, $verifyCode);
+        return $this->model->submit($id, $index, $memberId, $date, $verifyCode);
     }
 
     /**
@@ -89,7 +89,6 @@ class Handle
      */
     public function submit($id, $memberId, $verifyCode, $detail)
     {
-        $sign = md5($detail['time'] ?? 0 . 'healthych.com');
         $workDays = $detail['days'] ?? []; // 工作日列表
         $freeDay = [
             'day' => $workDays[0]['day'] ?? '20191025',
@@ -103,7 +102,7 @@ class Handle
         $date = date('Y-m-d', strtotime($freeDay['day']));// YYYY-mm-dd
         $index = 1; //不知道含义
 
-        return $this->model->submit($id, $index, $memberId, $date, $sign, $verifyCode);
+        return $this->model->submit($id, $index, $memberId, $date, $verifyCode);
     }
 
     /**
