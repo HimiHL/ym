@@ -9,6 +9,7 @@ class Kernel extends Command
         NBYueMiao::class,
         YueMiao::class,
         VaccineList::class,
-        MemberList::class
+        MemberList::class,
+        ForceYueMiao::class
     ];
 }

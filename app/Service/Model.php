@@ -4,6 +4,7 @@ namespace App\Service;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\TransferStats;
 
 class Model
 {
@@ -20,6 +21,7 @@ class Model
         'st' => '',
         'Accept-Language' => 'zh-cn',
     ];
+    public $client;
 
     /**
      * Miao constructor.
@@ -83,13 +85,13 @@ class Model
      */
     public function vaccineDetail($id)
     {
-        echo "获取一次秒杀信息-".date('YmdHis')."\n";
+        echo $this->microtime_int() . "获取秒杀信息\n";
         try {
             return $this->http('GET', '/seckill/vaccine/detailVo.do', [
                 'id' => $id
             ]);
         } catch(RequestException $e) {
-            echo "502，再重试一次-".date('YmdHis')."\n";
+            echo $this->microtime_int() . "系统502，重试获取秒杀\n";
             if (502 == $e->getResponse()->getStatusCode()) {
                 return $this->vaccineDetail($id);
             }
@@ -109,7 +111,7 @@ class Model
      */
     public function submit($id, $index, $memberID, $date, $verifyCode)
     {
-        echo "提交预约一次\n";
+        echo $this->microtime_int() . "开始提交预约\n";
         try {
             return $this->http('GET', '/seckill/vaccine/subscribe.do', [
                 'departmentVaccineId' => $id,
@@ -120,7 +122,7 @@ class Model
                 'vcode' => $verifyCode
             ]);
         } catch(RequestException $e) {
-            echo "秒杀系统502，再重试一次\n";
+            echo $this->microtime_int() . "系统502，重试预约\n";
             if (502 == $e->getResponse()->getStatusCode()) {
                 return $this->submit($id, $index, $memberID, $date, $verifyCode);
             }
@@ -153,18 +155,44 @@ class Model
         return $this->http('GET', '/order/linkman/findByUserId.do');
     }
 
+    public function region($code)
+    {
+        return $this->http('GET', '/base/region/childRegions.do', [
+            'parentCode' => $code
+        ]);
+    }
+
+
     private function http($method = 'POST', $route, $body = [], $checkResponse = true)
     {
+        echo "[".(new \DateTime())->format('H:i:s:u') . "]开始请求\n";
         $result = $this->client->request($method, $route, [
             'verify' => false,
             'headers' => $this->header,
-            'query' => $body
+            'query' => $body,
+            'on_stats' => function(TransferStats $stats) {
+                echo "[".(new \DateTime())->format('H:i:s:u') . "]请求完成\n";
+                echo '请求耗时: ' . $stats->getTransferTime() . "\n";
+            }
         ]);
+
 
         $data = json_decode($result->getBody()->getContents(), true);
         if ($checkResponse && $data['code'] !== '0000') {
             throw new Exception($data['msg']);
         }
         return $data;
+    }
+
+    public function microtime_float()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return ((float)$usec + (float)$sec);
+    }
+
+    public function microtime_int()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return (int)(((float)$usec + (float)$sec) * 1000);
     }
 }

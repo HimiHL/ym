@@ -3,13 +3,19 @@ namespace App\Console;
 
 use App\Service\CJY;
 use App\Service\Handle;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 
-class NBYueMiao extends Command
+class ForceYueMiao extends Command
 {
-    protected $name = 'nbym';
-    protected $description = '流程式约苗预约[耗时太长，建议在秒杀活动1分钟前开启]';
+    protected $name = 'fym';
+    protected $description = '暴力流程式约苗预约';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [
@@ -116,7 +122,7 @@ class NBYueMiao extends Command
             usleep(500);
         }
         // Step6 秒杀
-        $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate);
+        $result = $miao->multiSubmit($vaccineId, $linkMenId, $workDate);
         var_dump($result);
 
 

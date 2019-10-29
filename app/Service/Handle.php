@@ -2,6 +2,8 @@
 namespace App\Service;
 
 use Exception;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request;
 
 class Handle
 {
@@ -143,5 +145,46 @@ class Handle
     {
         $workDays = $this->model->workDays($departmentCode, $vaccineCode, $vaccineId, $memberId);
         return $workDays['data'] ?? [];
+    }
+
+    public function getRegions($code = 0)
+    {
+        $regions = $this->model->region($code);
+        return $regions['data'] ?? [];
+    }
+
+    public function multiSubmit($id, $memberId, $date, $total = 10)
+    {
+        $header = $this->model->header;
+        $client = $this->model->client;
+        $route = '/seckill/vaccine/subscribe.do?';
+
+        $requests = function($total) use($route, $header, $id, $memberId, $date) {
+            for ($i = 0; $i < $total; $i++) {
+                $this->getValidateCode();
+                for ($j = 0; $j < 100; $j++) {
+                    yield new Request('GET', $route . http_build_query([
+                        'departmentVaccineId' => $id,
+                        'vaccineIndex' => 1,
+                        'linkmanId' => $memberId,
+                        'subscribeDate' => $date,
+                        'vcode' => $j
+                    ]), $header);
+                }
+            }
+        };
+
+        $pool = new Pool($client, $requests($total), [
+            'concurrency' => 100,
+            'fulfilled' => function($response, $index) {
+                echo "[index:{$index}](".(new \DateTime())->format('H:i:s:u') . ")请求完成:{$response->getBody()}\n";
+            },
+            'rejected' => function($reason, $index) {
+                echo "[index:{$index}](".(new \DateTime())->format('H:i:s:u') . ")请求失败:{$reason}\n";
+            }
+        ]);
+
+        $promise = $pool->promise();
+        $promise->wait();
     }
 }
