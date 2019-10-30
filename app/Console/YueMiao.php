@@ -3,26 +3,15 @@ namespace App\Console;
 
 use App\Service\CJY;
 use App\Service\Handle;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use App\Util;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 
 class YueMiao extends Command
 {
-    protected $name = 'ym';
-    protected $description = '约苗预约';
+    protected $name = 'ym:normal';
+    protected $description = '预约疫苗[手动选择预约日期]';
     protected $requireArgument = [
-        [
-            'key' => 'MemberId',
-            'intro' => '身份ID，通过php artisan mlist中提取的`身份ID`字段'
-        ],
-        [
-            'key' => 'VaccineId',
-            'intro' => '预约ID，通过php artisan vlist中提取的`预约ID`字段'
-        ],
     ];
     protected $optionalArgument = [
     ];
@@ -34,39 +23,145 @@ class YueMiao extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
-
         $miao = new Handle;
-        $memberId = intval($input->getArgument('MemberId'));
-        $vaccineId = intval($input->getArgument('VaccineId'));
+        $regionCode = 0;
+        $regionList = [];
+        $regionHeader = [
+            '序号', '地区', '地区代码'
+        ];
 
-        $this->info("正在为ID为{$memberId}的用户抢购预约ID为{$vaccineId}的疫苗，请稍后在提示后输入验证码...");
+        $vaccineCode = 8803;
+        $vaccineList = [];
+        $vaccineHeader = [
+            '序号', '预约ID', '医院', '预约时间'
+        ];
 
-        $vcode = $miao->getValidateCode();
+        $linkMenId = 0;
+        $linkMenList = [];
+        $linkMenHeader = [
+            '序号', '姓名', '身份证号'
+        ];
+
+        $workDate = '';
+        $workDateList = [];
+        $workDateHeader = [
+            '序号', '日期'
+        ];
+
         $verifyCode = 0;
+
+        $this->warning('当前模式下手动选定的日期实际上可能无法预约！如担心预约错误请选择 `ym:auto`');
+        $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
+        
+        // Step1 选择地区
+        for ($i = 0; $i <= 1; $i++) {
+            $regionList = $miao->getRegions($regionCode);
+            $rows = [];
+            foreach ($regionList as $key => $region) {
+                $rows[] = [
+                    $key, $region['name'], $region['value']
+                ];
+            }
+            $this->table($regionHeader, $rows);
+            $regionIndex = $this->ask('请输入序号:');
+            $regionCode = $regionList[$regionIndex]['value'];
+        }
+
+        // Step2 选择医院
+        $vaccineList = $miao->getVaccines(1, $vaccineCode, $regionCode);
+        $rows = [];
+        foreach ($vaccineList as $key => $item) {
+            $rows[] = [
+                $key, $item['vaccines'][0]['vaccine']['id'], $item['name'], "[".Util::getWeek($item['vaccines'][0]['vaccine']['startTime'])."]".$item['vaccines'][0]['vaccine']['startTime']
+            ];
+        }
+        $this->table($vaccineHeader, $rows);
+        $vaccineIndex = $this->ask('请输入序号: ');
+        $vaccineId = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['id'];
+        $departmentCode = $vaccineList[$vaccineIndex]['code'];
+        $startTime = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['startTime'];
+        $startTimeMillSecond = strtotime($startTime) * 1000;
+
+        // Step3 选择预约人
+        $linkMenList = $miao->getMemberList();
+        $rows = [];
+        foreach ($linkMenList as $key => $item) {
+            $rows[] = [
+                $key, $item['name'], substr_replace($item['idCardNo'], '************', 4, 12)
+            ];
+        }
+        $this->table($linkMenHeader, $rows);
+        $linkMenIndex = $this->ask('请输入序号: ');
+        $linkMenId = $linkMenList[$linkMenIndex]['id'];
+        
+        // Step4 选择日期
+        $workDateList = $miao->getWorkDays($departmentCode, $vaccineCode, $vaccineId, $linkMenId);
+        $rows = [];
+        foreach ($workDateList['dateList'] as $key => $item) {
+            $rows[] = [
+                $key, "[".Util::getWeek($item)."]".$item
+            ];
+        }
+        $this->table($workDateHeader, $rows);
+        $dateIndex = $this->ask('请选择日期[输入序号]: ');
+        $workDate = $workDateList['dateList'][$dateIndex];
+
+        $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约【{$workDate}】的疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
+
+        // Step5 倒计时
+        $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
+        $vcode = $miao->getValidateCode();
+        while($startTimeMillSecond > $this->microtime_int() + 3) {
+            $hasMillSecond = $startTimeMillSecond - $this->microtime_int();
+            if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
+                $verifyCode = $this->getVerifyCode($miao);
+            }
+            $output->write("\r".(new \DateTime())->format('H:i:s:u'));
+            usleep(500);
+        }
+        try {
+            $detail = $miao->vaccineDetail($vaccineId);
+            $this->info("在倒计时完毕后，获取到秒杀详情信息");
+            $this->info(json_encode($detail));
+        } catch(\Exception $e) {
+            $this->danger($e->getMessage());
+        }
+        // Step6 秒杀
+        $sign = md5($detail['time'] . 'fuckhacker10000times');
+        $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+        $this->info(json_encode($result));
+    }
+
+    public function microtime_float()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return ((float)$usec + (float)$sec);
+    }
+
+    public function microtime_int()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return (int)(((float)$usec + (float)$sec) * 1000);
+    }
+
+    public function getVerifyCode(&$miao)
+    {
+        $verifyCode = 0;
+        $this->info("开始获取验证码");
+        $vcode = $miao->getValidateCode();
         if (getenv('CJY_POWER')) {
             $cjyResult = (new CJY())->process($vcode);
             if ($cjyResult['err_no'] == 0) {
                 $verifyCode = $cjyResult['pic_str'];
+                $this->info("验证码解析为: {$verifyCode}\n");
             }
         }
         // 如果远程处理验证码失误，需要开始人工输入验证码
         if (!$verifyCode) {
             file_put_contents(__DIR__.'/vcode.jpg', base64_decode($vcode));
             system('open '.__DIR__.'/vcode.jpg');
-            $verifyCode = $this->ask('请输入图片验证码');
+            $verifyCode = $this->ask('请输入图片验证码:');
         }
-
-        $detail = [];
-        try {
-            $detail = $miao->vaccineDetail($vaccineId);
-            $nowDate = date('Y-m-d H:i:s');
-            $this->info("在倒计时完毕后，获取到秒杀详情信息[{$nowDate}]");
-            var_dump($detail);
-        } catch(\Exception $e) {
-            $this->danger($e->getMessage());
-        }
-        $result = $miao->submit($vaccineId, $memberId, $verifyCode, $detail);
-        var_dump($result);
+        return $verifyCode;
     }
-
 }

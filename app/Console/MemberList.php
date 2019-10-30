@@ -7,8 +7,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class MemberList extends Command
 {
-    protected $name = 'mlist';
-    protected $description = '获取当前用户绑定的身份证信息';
+    protected $name = 'list:member';
+    protected $description = '用户信息列表';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [

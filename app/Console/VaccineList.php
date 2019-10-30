@@ -9,8 +9,8 @@ use Symfony\Component\Console\Question\Question;
 
 class VaccineList extends Command
 {
-    protected $name = 'vlist';
-    protected $description = '成都可秒杀的疫苗列表';
+    protected $name = 'list:vacc';
+    protected $description = '疫苗列表';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [

@@ -6,10 +6,10 @@ use Symfony\Component\Console\Command\Command;
 class Kernel extends Command
 {
     public $commands = [
-        NBYueMiao::class,
         YueMiao::class,
+        YueMiaoForce::class,
+        YueMiaoAuto::class,
         VaccineList::class,
         MemberList::class,
-        ForceYueMiao::class
     ];
 }

@@ -1,6 +1,7 @@
 <?php
 namespace App\Console;
 
+use App\Util;
 use Symfony\Component\Console\Command\Command as BaseCommand;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
@@ -54,25 +55,30 @@ class Command extends BaseCommand
 
     public function info($str)
     {
+        $str = Util::buildTimePrefix($str);
         $this->output->writeln("<info>{$str}<info>");
     }
 
     public function warning($str)
     {
+        $str = Util::buildTimePrefix($str);
         $this->output->writeln("<comment>{$str}<comment>");
     }
 
     public function question($str)
     {
+        $str = Util::buildTimePrefix($str);
         $this->output->writeln("<question>{$str}<question>");
     }
 
     public function danger($str)
     {
+        $str = Util::buildTimePrefix($str);
         $this->output->writeln("<error>{$str}<error>");
     }
     public function ask($str)
     {
+        $str = Util::buildTimePrefix($str);
         return $this->getHelper('question')->ask($this->input, $this->output, new Question("{$str}"));
     }
 
@@ -84,6 +90,7 @@ class Command extends BaseCommand
 
     public function chooseAsk($str, $list)
     {
+        $str = Util::buildTimePrefix($str);
         $question = new ChoiceQuestion("{$str}\n", $list);
         $question->setErrorMessage('请选择一个选项');
         return $this->getHelper('question')->ask($this->input, $this->output, $question);

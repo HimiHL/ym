@@ -6,10 +6,10 @@ use App\Service\Handle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class NBYueMiao extends Command
+class YueMiaoAuto extends Command
 {
-    protected $name = 'nbym';
-    protected $description = '流程式约苗预约[耗时太长，建议在秒杀活动1分钟前开启]';
+    protected $name = 'ym:auto';
+    protected $description = '预约疫苗[自动选择预约日期]';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [
@@ -70,13 +70,12 @@ class NBYueMiao extends Command
         $rows = [];
         foreach ($vaccineList as $key => $item) {
             $rows[] = [
-                $key, $item['vaccines'][0]['vaccine']['id'], $item['name'], $item['vaccines'][0]['vaccine']['startTime']
+                $key, $item['vaccines'][0]['vaccine']['id'], $item['name'], "[".Util::getWeek($item['vaccines'][0]['vaccine']['startTime'])."]".$item['vaccines'][0]['vaccine']['startTime']
             ];
         }
         $this->table($vaccineHeader, $rows);
         $vaccineIndex = $this->ask('请输入序号: ');
         $vaccineId = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['id'];
-        $departmentCode = $vaccineList[$vaccineIndex]['code'];
         $startTime = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['startTime'];
         $startTimeMillSecond = strtotime($startTime) * 1000;
 
@@ -91,41 +90,43 @@ class NBYueMiao extends Command
         $this->table($linkMenHeader, $rows);
         $linkMenIndex = $this->ask('请输入序号: ');
         $linkMenId = $linkMenList[$linkMenIndex]['id'];
-        // Step4 选择日期
-        $workDateList = $miao->getWorkDays($departmentCode, $vaccineCode, $vaccineId, $linkMenId);
-        $rows = [];
-        foreach ($workDateList['dateList'] as $key => $item) {
-            $rows[] = [
-                $key, $item
-            ];
+
+        $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
+
+        if (!$verifyCode) {
+            $verifyCode = $this->getVerifyCode($miao);
         }
-        $this->table($workDateHeader, $rows);
-        $dateIndex = $this->ask('请选择日期[输入序号]: ');
-        $workDate = $workDateList['dateList'][$dateIndex];
-
-        $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约【{$workDate}】的疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
-
-        // Step5 倒计时
+        // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
         while($startTimeMillSecond > $this->microtime_int() + 3) {
             $hasMillSecond = $startTimeMillSecond - $this->microtime_int();
             if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
-                $verifyCode = $this->ask('输入验证码');
+                $verifyCode = $this->getVerifyCode($miao);
             }
             $output->write("\r".(new \DateTime())->format('H:i:s:u'));
             usleep(500);
         }
-        // Step6 秒杀
-        $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate);
-        var_dump($result);
-
-
+        // Step5 获取秒杀详情 ...至关重要的一步
         try {
             $detail = $miao->vaccineDetail($vaccineId);
             $this->info("在倒计时完毕后，获取到秒杀详情信息");
-            var_dump($detail);
+            $this->info(json_encode($detail));
         } catch(\Exception $e) {
             $this->danger($e->getMessage());
+        }
+        // Step6 秒杀
+        $sign = md5($detail['time'] . 'fuckhacker10000times');
+        foreach ($detail['days'] as $day) {
+            if ($day['total'] > 0) {
+                $workDate = date('Y-m-d', strtotime($day['day']));
+                if (!$verifyCode) {
+                    $verifyCode = $this->getVerifyCode($miao);
+                }
+                $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                $this->info("{$workDate}剩余{$day['total']}的秒杀结果");
+                $this->info(json_encode($result));
+                $verifyCode = 0;
+            }
         }
     }
 
@@ -139,5 +140,26 @@ class NBYueMiao extends Command
     {
         list($usec, $sec) = explode(" ", microtime());
         return (int)(((float)$usec + (float)$sec) * 1000);
+    }
+    
+    public function getVerifyCode(&$miao)
+    {
+        $verifyCode = 0;
+        $this->info("开始获取验证码");
+        $vcode = $miao->getValidateCode();
+        if (getenv('CJY_POWER')) {
+            $cjyResult = (new CJY())->process($vcode);
+            if ($cjyResult['err_no'] == 0) {
+                $verifyCode = $cjyResult['pic_str'];
+                $this->info("验证码解析为: {$verifyCode}\n");
+            }
+        }
+        // 如果远程处理验证码失误，需要开始人工输入验证码
+        if (!$verifyCode) {
+            file_put_contents(__DIR__.'/vcode.jpg', base64_decode($vcode));
+            system('open '.__DIR__.'/vcode.jpg');
+            $verifyCode = $this->ask('请输入图片验证码:');
+        }
+        return $verifyCode;
     }
 }

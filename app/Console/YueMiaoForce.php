@@ -1,21 +1,14 @@
 <?php
 namespace App\Console;
 
-use App\Service\CJY;
 use App\Service\Handle;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Pool;
-use GuzzleHttp\Psr7\Request;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 
-class ForceYueMiao extends Command
+class YueMiaoForce extends Command
 {
-    protected $name = 'fym';
-    protected $description = '暴力流程式约苗预约';
+    protected $name = 'ym:force';
+    protected $description = '预约疫苗[暴力破解验证码]';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [
@@ -112,27 +105,24 @@ class ForceYueMiao extends Command
         $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约【{$workDate}】的疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
 
         // Step5 倒计时
-        $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
+        $this->danger("活动将于{$startTime}开始，正在倒计时中..");
         while($startTimeMillSecond > $this->microtime_int() + 3) {
-            $hasMillSecond = $startTimeMillSecond - $this->microtime_int();
-            if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
-                $verifyCode = $this->ask('输入验证码');
-            }
             $output->write("\r".(new \DateTime())->format('H:i:s:u'));
             usleep(500);
         }
-        // Step6 秒杀
-        $result = $miao->multiSubmit($vaccineId, $linkMenId, $workDate);
-        var_dump($result);
-
-
         try {
             $detail = $miao->vaccineDetail($vaccineId);
             $this->info("在倒计时完毕后，获取到秒杀详情信息");
-            var_dump($detail);
+            $this->info(json_encode($detail));
         } catch(\Exception $e) {
             $this->danger($e->getMessage());
         }
+        // Step6 秒杀
+        $sign = md5($detail['time'] . 'fuckhacker10000times');
+        $result = $miao->multiSubmit($vaccineId, $linkMenId, $workDate, $sign);
+        $this->info(json_encode($result));
+
+
     }
 
     public function microtime_float()

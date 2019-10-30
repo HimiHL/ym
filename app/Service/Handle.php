@@ -1,6 +1,7 @@
 <?php
 namespace App\Service;
 
+use App\Util;
 use Exception;
 use GuzzleHttp\Pool;
 use GuzzleHttp\Psr7\Request;
@@ -79,32 +80,10 @@ class Handle
      * 秒杀
      * 
      */
-    public function fixedSubmit($id, $memberId, $verifyCode, $date)
+    public function fixedSubmit($id, $memberId, $verifyCode, $date, $sign)
     {
         $index = 0; //不知道含义
-        return $this->model->submit($id, $index, $memberId, $date, $verifyCode);
-    }
-
-    /**
-     * 秒杀
-     * 
-     */
-    public function submit($id, $memberId, $verifyCode, $detail)
-    {
-        $workDays = $detail['days'] ?? []; // 工作日列表
-        $freeDay = [
-            'day' => $workDays[0]['day'] ?? '20191025',
-            'total' => 1
-        ];
-        foreach ($workDays as $workDay) {
-            if ($workDay['total'] > 0) {
-                $freeDay = $workDay;
-            }
-        }
-        $date = date('Y-m-d', strtotime($freeDay['day']));// YYYY-mm-dd
-        $index = 1; //不知道含义
-
-        return $this->model->submit($id, $index, $memberId, $date, $verifyCode);
+        return $this->model->submit($id, $index, $memberId, $date, $verifyCode, $sign);
     }
 
     /**
@@ -153,13 +132,13 @@ class Handle
         return $regions['data'] ?? [];
     }
 
-    public function multiSubmit($id, $memberId, $date, $total = 10)
+    public function multiSubmit($id, $memberId, $date, $sign, $total = 10)
     {
         $header = $this->model->header;
         $client = $this->model->client;
         $route = '/seckill/vaccine/subscribe.do?';
 
-        $requests = function($total) use($route, $header, $id, $memberId, $date) {
+        $requests = function($total) use($route, $header, $id, $memberId, $date, $sign) {
             for ($i = 0; $i < $total; $i++) {
                 $this->getValidateCode();
                 for ($j = 0; $j < 100; $j++) {
@@ -168,6 +147,7 @@ class Handle
                         'vaccineIndex' => 1,
                         'linkmanId' => $memberId,
                         'subscribeDate' => $date,
+                        'sign' => $sign,
                         'vcode' => $j
                     ]), $header);
                 }
@@ -177,10 +157,10 @@ class Handle
         $pool = new Pool($client, $requests($total), [
             'concurrency' => 100,
             'fulfilled' => function($response, $index) {
-                echo "[index:{$index}](".(new \DateTime())->format('H:i:s:u') . ")请求完成:{$response->getBody()}\n";
+                echo Util::buildTimePrefix("[索引:{$index}请求完成:{$response->getBody()}\n");
             },
             'rejected' => function($reason, $index) {
-                echo "[index:{$index}](".(new \DateTime())->format('H:i:s:u') . ")请求失败:{$reason}\n";
+                echo Util::buildTimePrefix("[索引:{$index}请求失败:{$reason}\n");
             }
         ]);
 

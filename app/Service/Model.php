@@ -1,6 +1,7 @@
 <?php
 namespace App\Service;
 
+use App\Util;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -85,13 +86,13 @@ class Model
      */
     public function vaccineDetail($id)
     {
-        echo $this->microtime_int() . "获取秒杀信息\n";
+        echo Util::buildTimePrefix("获取秒杀信息\n");
         try {
             return $this->http('GET', '/seckill/vaccine/detailVo.do', [
                 'id' => $id
             ]);
         } catch(RequestException $e) {
-            echo $this->microtime_int() . "系统502，重试获取秒杀\n";
+            echo Util::buildTimePrefix("系统502，重试获取秒杀\n");
             if (502 == $e->getResponse()->getStatusCode()) {
                 return $this->vaccineDetail($id);
             }
@@ -109,22 +110,22 @@ class Model
      *
      * @return mixed
      */
-    public function submit($id, $index, $memberID, $date, $verifyCode)
+    public function submit($id, $index, $memberID, $date, $verifyCode, $sign)
     {
-        echo $this->microtime_int() . "开始提交预约\n";
+        echo Util::buildTimePrefix("开始提交预约\n");
         try {
             return $this->http('GET', '/seckill/vaccine/subscribe.do', [
                 'departmentVaccineId' => $id,
                 'vaccineIndex' => $index,
                 'linkmanId' => $memberID,
                 'subscribeDate' => $date,
-                // 'sign' => $sign,
+                'sign' => $sign,
                 'vcode' => $verifyCode
             ]);
         } catch(RequestException $e) {
-            echo $this->microtime_int() . "系统502，重试预约\n";
+            echo Util::buildTimePrefix("系统502，重试预约\n");
             if (502 == $e->getResponse()->getStatusCode()) {
-                return $this->submit($id, $index, $memberID, $date, $verifyCode);
+                return $this->submit($id, $index, $memberID, $date, $verifyCode, $sign);
             }
         }
     }
@@ -165,14 +166,14 @@ class Model
 
     private function http($method = 'POST', $route, $body = [], $checkResponse = true)
     {
-        echo "[".(new \DateTime())->format('H:i:s:u') . "]开始请求\n";
+        echo Util::buildTimePrefix("开始请求{$route}\n");
         $result = $this->client->request($method, $route, [
             'verify' => false,
             'headers' => $this->header,
             'query' => $body,
             'on_stats' => function(TransferStats $stats) {
-                echo "[".(new \DateTime())->format('H:i:s:u') . "]请求完成\n";
-                echo '请求耗时: ' . $stats->getTransferTime() . "\n";
+                echo Util::buildTimePrefix("请求结束\n");
+                echo Util::buildTimePrefix("请求耗时:". $stats->getTransferTime() ."\n");
             }
         ]);
 
