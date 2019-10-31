@@ -2,6 +2,7 @@
 namespace App\Console;
 
 use App\Service\Handle;
+use App\Util;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -106,7 +107,7 @@ class YueMiaoForce extends Command
 
         // Step5 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..");
-        while($startTimeMillSecond > $this->microtime_int() + 3) {
+        while($startTimeMillSecond > Util::microtimeInt() + 6) {
             $output->write("\r".(new \DateTime())->format('H:i:s:u'));
             usleep(500);
         }
@@ -119,21 +120,7 @@ class YueMiaoForce extends Command
         }
         // Step6 秒杀
         $sign = md5($detail['time'] . 'fuckhacker10000times');
-        $result = $miao->multiSubmit($vaccineId, $linkMenId, $workDate, $sign);
+        $result = $miao->forceSubmit($vaccineId, $linkMenId, $workDate, $sign);
         $this->info(json_encode($result));
-
-
-    }
-
-    public function microtime_float()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return ((float)$usec + (float)$sec);
-    }
-
-    public function microtime_int()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return (int)(((float)$usec + (float)$sec) * 1000);
     }
 }

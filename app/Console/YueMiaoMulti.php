@@ -7,10 +7,10 @@ use App\Util;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class YueMiao extends Command
+class YueMiaoMulti extends Command
 {
-    protected $name = 'ym:normal';
-    protected $description = '预约疫苗[手动选择预约日期]';
+    protected $name = 'ym:multi';
+    protected $description = '预约疫苗[并发预约]';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [
@@ -29,6 +29,7 @@ class YueMiao extends Command
         $regionHeader = [
             '序号', '地区', '地区代码'
         ];
+
 
         $vaccineCode = 8803;
         $vaccineList = [];
@@ -50,9 +51,7 @@ class YueMiao extends Command
 
         $verifyCode = 0;
 
-        $this->warning('当前模式下手动选定的日期实际上可能无法预约！如担心预约错误请选择 `ym:auto`');
         $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
-        
         // Step1 选择地区
         for ($i = 0; $i <= 1; $i++) {
             $regionList = $miao->getRegions($regionCode);
@@ -78,7 +77,6 @@ class YueMiao extends Command
         $this->table($vaccineHeader, $rows);
         $vaccineIndex = $this->ask('请输入序号: ');
         $vaccineId = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['id'];
-        $departmentCode = $vaccineList[$vaccineIndex]['code'];
         $startTime = $vaccineList[$vaccineIndex]['vaccines'][0]['vaccine']['startTime'];
         $startTimeMillSecond = strtotime($startTime) * 1000;
 
@@ -93,32 +91,19 @@ class YueMiao extends Command
         $this->table($linkMenHeader, $rows);
         $linkMenIndex = $this->ask('请输入序号: ');
         $linkMenId = $linkMenList[$linkMenIndex]['id'];
-        
-        // Step4 选择日期
-        $workDateList = $miao->getWorkDays($departmentCode, $vaccineCode, $vaccineId, $linkMenId);
-        $rows = [];
-        foreach ($workDateList['dateList'] as $key => $item) {
-            $rows[] = [
-                $key, "[".Util::getWeek($item)."]".$item
-            ];
-        }
-        $this->table($workDateHeader, $rows);
-        $dateIndex = $this->ask('请选择日期[输入序号]: ');
-        $workDate = $workDateList['dateList'][$dateIndex];
 
-        $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约【{$workDate}】的疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
-
-        // Step5 倒计时
+        $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
+        // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
-        $vcode = $miao->getValidateCode();
-        while($startTimeMillSecond > $this->microtime_int() + 3) {
-            $hasMillSecond = $startTimeMillSecond - $this->microtime_int();
+        while($startTimeMillSecond > Util::microtimeInt() + 6) {
+            $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
             if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
             $output->write("\r".(new \DateTime())->format('H:i:s:u'));
             usleep(500);
         }
+        // Step5 获取秒杀详情 ...至关重要的一步
         try {
             $detail = $miao->vaccineDetail($vaccineId);
             $this->info("在倒计时完毕后，获取到秒杀详情信息");
@@ -128,22 +113,19 @@ class YueMiao extends Command
         }
         // Step6 秒杀
         $sign = md5($detail['time'] . 'fuckhacker10000times');
-        $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
-        $this->info(json_encode($result));
+        foreach ($detail['days'] as $day) {
+            if ($day['total'] > 0) {
+                $workDate = date('Y-m-d', strtotime($day['day']));
+                if (!$verifyCode) {
+                    $verifyCode = $this->getVerifyCode($miao);
+                }
+                $this->info("{$workDate}剩余{$day['total']}的并发秒杀:");
+                $miao->multiSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                $verifyCode = 0;
+            }
+        }
     }
-
-    public function microtime_float()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return ((float)$usec + (float)$sec);
-    }
-
-    public function microtime_int()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return (int)(((float)$usec + (float)$sec) * 1000);
-    }
-
+    
     public function getVerifyCode(&$miao)
     {
         $verifyCode = 0;

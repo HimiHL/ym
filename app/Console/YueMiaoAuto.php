@@ -3,6 +3,7 @@ namespace App\Console;
 
 use App\Service\CJY;
 use App\Service\Handle;
+use App\Util;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -92,14 +93,10 @@ class YueMiaoAuto extends Command
         $linkMenId = $linkMenList[$linkMenIndex]['id'];
 
         $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
-
-        if (!$verifyCode) {
-            $verifyCode = $this->getVerifyCode($miao);
-        }
         // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
-        while($startTimeMillSecond > $this->microtime_int() + 3) {
-            $hasMillSecond = $startTimeMillSecond - $this->microtime_int();
+        while($startTimeMillSecond > Util::microtimeInt() + 6) {
+            $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
             if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
@@ -122,24 +119,12 @@ class YueMiaoAuto extends Command
                 if (!$verifyCode) {
                     $verifyCode = $this->getVerifyCode($miao);
                 }
-                $result = $miao->fixedSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                $result = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
                 $this->info("{$workDate}剩余{$day['total']}的秒杀结果");
                 $this->info(json_encode($result));
                 $verifyCode = 0;
             }
         }
-    }
-
-    public function microtime_float()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return ((float)$usec + (float)$sec);
-    }
-
-    public function microtime_int()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return (int)(((float)$usec + (float)$sec) * 1000);
     }
     
     public function getVerifyCode(&$miao)

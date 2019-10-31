@@ -6,7 +6,7 @@ use Symfony\Component\Console\Command\Command;
 class Kernel extends Command
 {
     public $commands = [
-        YueMiao::class,
+        YueMiaoMulti::class,
         YueMiaoForce::class,
         YueMiaoAuto::class,
         VaccineList::class,

@@ -23,4 +23,24 @@ class Util
         }
         return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date('w', $date)];
     }
+    
+    /**
+     * 获取当前时间[微秒]
+     * 
+     */
+    public static function microtimeFloat()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return ((float)$usec + (float)$sec);
+    }
+    
+    /**
+     * 获取当前时间[微秒]
+     * 
+     */
+    public static function microtimeInt()
+    {
+        list($usec, $sec) = explode(" ", microtime());
+        return ((float)$usec + (float)$sec);
+    }
 }

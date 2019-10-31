@@ -11,19 +11,11 @@ class Handle
     public $model;
     public function __construct()
     {
-        $cookie = getenv('COOKIE');
-        if (!$cookie) {
-            throw new Exception('请配置COOKIE');
-        }
         $token = getenv('TK');
         if (!$token) {
             throw new Exception('请配置TK');
         }
-        $st = getenv('ST');
-        if (!$st) {
-            throw new Exception('请配置ST');
-        }
-        $this->model = new Model($cookie, $token, $st);
+        $this->model = new Model($token);
     }
 
     /**
@@ -40,7 +32,7 @@ class Handle
                 if ($offset > $response['data']['total']) {
                     break;
                 }
-                $offset += 10;//$response['data']['end'];
+                $offset += 10;
 
                 foreach ($response['data']['rows'] as $row) {
                     // 如果可以秒杀
@@ -80,10 +72,20 @@ class Handle
      * 秒杀
      * 
      */
-    public function fixedSubmit($id, $memberId, $verifyCode, $date, $sign)
+    public function submit($id, $memberId, $verifyCode, $date, $sign)
     {
-        $index = 0; //不知道含义
+        $index = 1; //不知道含义
         return $this->model->submit($id, $index, $memberId, $date, $verifyCode, $sign);
+    }
+
+    /**
+     * 并发秒杀
+     * 
+     */
+    public function multiSubmit($id, $memberId, $verifyCode, $date, $sign)
+    {
+        $index = 1; //不知道含义
+        return $this->model->multiSubmit($id, $index, $memberId, $date, $verifyCode, $sign);
     }
 
     /**
@@ -132,7 +134,7 @@ class Handle
         return $regions['data'] ?? [];
     }
 
-    public function multiSubmit($id, $memberId, $date, $sign, $total = 10)
+    public function forceSubmit($id, $memberId, $date, $sign, $total = 10)
     {
         $header = $this->model->header;
         $client = $this->model->client;

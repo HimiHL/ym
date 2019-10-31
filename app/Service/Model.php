@@ -31,14 +31,14 @@ class Model
      * @param $token Token
      * @param $st 未知
      */
-    public function __construct($cookie, $token, $st)
+    public function __construct($token)
     {
-        $this->header['Cookie'] = $cookie;
         $this->header['tk'] = $token;
-        $this->header['st'] = $st;
         $this->client = new Client([
             'base_uri' => $this->domain,
-            'timeout'  => 999999
+            'timeout'  => 999999,
+            'headers' => $this->header
+
         ]);
     }
 
@@ -104,30 +104,70 @@ class Model
      *
      * @param $id
      * @param $index
-     * @param $memberID
+     * @param $memberId
      * @param $date
      * @param $sign
      *
      * @return mixed
      */
-    public function submit($id, $index, $memberID, $date, $verifyCode, $sign)
+    public function submit($id, $index, $memberId, $date, $verifyCode, $sign)
     {
         echo Util::buildTimePrefix("开始提交预约\n");
         try {
             return $this->http('GET', '/seckill/vaccine/subscribe.do', [
                 'departmentVaccineId' => $id,
                 'vaccineIndex' => $index,
-                'linkmanId' => $memberID,
+                'linkmanId' => $memberId,
                 'subscribeDate' => $date,
                 'sign' => $sign,
                 'vcode' => $verifyCode
-            ]);
+            ], false);
         } catch(RequestException $e) {
-            echo Util::buildTimePrefix("系统502，重试预约\n");
-            if (502 == $e->getResponse()->getStatusCode()) {
-                return $this->submit($id, $index, $memberID, $date, $verifyCode, $sign);
-            }
+            echo Util::buildTimePrefix("系统状态码:{$e->getResponse()->getStatusCode()}，重试预约\n");
+            return $this->submit($id, $index, $memberId, $date, $verifyCode, $sign);
         }
+    }
+
+    /**
+     * 提交下单
+     *
+     * @param $id
+     * @param $index
+     * @param $memberID
+     * @param $date
+     * @param $sign
+     *
+     * @return mixed
+     */
+    public function multiSubmit($id, $index, $memberId, $date, $verifyCode, $sign, $total = 20)
+    {
+        echo Util::buildTimePrefix("开始提交并发预约{$total}次\n");
+        $requests = function($total) use($id, $index, $memberId, $date, $sign, $verifyCode) {
+            for ($i = 0; $i < $total; $i++) {
+                $this->getValidateCode();
+                yield new Request('GET', '/seckill/vaccine/subscribe.do?' . http_build_query([
+                    'departmentVaccineId' => $id,
+                    'vaccineIndex' => $index,
+                    'linkmanId' => $memberId,
+                    'subscribeDate' => $date,
+                    'sign' => $sign,
+                    'vcode' => $verifyCode
+                ]));
+            }
+        };
+
+        $pool = new Pool($this->client, $requests($total), [
+            'concurrency' => $total,
+            'fulfilled' => function($response, $index) {
+                echo Util::buildTimePrefix("[索引:{$index}请求完成:{$response->getBody()}\n");
+            },
+            'rejected' => function($reason, $index) {
+                echo Util::buildTimePrefix("[索引:{$index}请求失败:{$reason}\n");
+            }
+        ]);
+
+        $promise = $pool->promise();
+        $promise->wait();
     }
 
     public function getVerifyCode()
@@ -163,13 +203,11 @@ class Model
         ]);
     }
 
-
     private function http($method = 'POST', $route, $body = [], $checkResponse = true)
     {
         echo Util::buildTimePrefix("开始请求{$route}\n");
         $result = $this->client->request($method, $route, [
             'verify' => false,
-            'headers' => $this->header,
             'query' => $body,
             'on_stats' => function(TransferStats $stats) {
                 echo Util::buildTimePrefix("请求结束\n");
@@ -183,17 +221,5 @@ class Model
             throw new Exception($data['msg']);
         }
         return $data;
-    }
-
-    public function microtime_float()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return ((float)$usec + (float)$sec);
-    }
-
-    public function microtime_int()
-    {
-        list($usec, $sec) = explode(" ", microtime());
-        return (int)(((float)$usec + (float)$sec) * 1000);
     }
 }
