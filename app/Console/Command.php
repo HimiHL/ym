@@ -28,6 +28,21 @@ class Command extends BaseCommand
                 $this->addArgument($optionalArgument['key'], InputArgument::OPTIONAL, $optionalArgument['intro']);
             }
         }
+        if (isset($this->requireOption)) {
+            foreach ($this->requireOption as $requireOption) {
+                $this->addOption($requireOption['key'], $requireOption['k'] ?? null, InputOption::VALUE_REQUIRED, $requireArgument['intro']);
+            }
+        }
+        if (isset($this->option)) {
+            foreach ($this->option as $option) {
+                $this->addOption($option['key'], $option['k'] ?? null, InputOption::VALUE_OPTIONAL, $option['intro']);
+            }
+        }
+        if (isset($this->noneOption)) {
+            foreach ($this->noneOption as $noneOption) {
+                $this->addOption($noneOption['key'], $noneOption['k'] ?? null, InputOption::VALUE_NONE, $noneOption['intro']);
+            }
+        }
         $this->addOption(
             'config',
             'c',
@@ -38,6 +53,7 @@ class Command extends BaseCommand
     }
     public function execute(InputInterface $input, OutputInterface $output)
     {
+        
         if (file_exists($input->getOption('config'))) {
             // 开始加载JSON配置
             $configJson = file_get_contents($input->getOption('config'));

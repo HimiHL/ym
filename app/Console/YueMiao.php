@@ -7,10 +7,10 @@ use App\Util;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class YueMiaoForce extends Command
+class YueMiao extends Command
 {
-    protected $name = 'ym:force';
-    protected $description = '预约疫苗[无限循环请求]';
+    protected $name = 'ym';
+    protected $description = '预约疫苗[自动选择预约日期]';
     protected $requireArgument = [
     ];
     protected $optionalArgument = [
@@ -31,8 +31,8 @@ class YueMiaoForce extends Command
             'intro' => '预约人ID'
         ],
         [
-            'key' => 'times',
-            'intro' => '循环次数'
+            'key' => 'offsettime',
+            'intro' => '偏移毫秒，默认700'
         ]
     ];
     protected $noneOption = [
@@ -69,13 +69,12 @@ class YueMiaoForce extends Command
             '序号', 'ID', '姓名', '身份证号'
         ];
 
-        $offsetTime = 1500;
-        $times = (int)$input->getOption('times') ?? 1000;
+        $offsetTime = (int)$input->getOption('offsettime') ?? 700;
 
         $verifyCode = 0;
         $isMulti = $input->getOption('multi');
-        
-        $this->info('并发秒杀开关: '. $isMulti ? '开' : '关');
+
+        $this->info('并发秒杀开关: '. ($isMulti ? '开' : '关'));
         $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
 
         // Step1 选择地区
@@ -157,9 +156,12 @@ class YueMiaoForce extends Command
 
         // Step5 获取秒杀详情 ...至关重要的一步
         try {
-            $detail = $miao->moreTimesVaccineDetail($vaccineId, $times);
+            $detail = $miao->vaccineDetail($vaccineId);
         } catch(\Exception $e) {
             $this->danger($e->getMessage());
+            if ($e->getCode() === 5555) {
+                $detail = $miao->vaccineDetail($vaccineId);
+            }
         }
 
         // Step6 秒杀

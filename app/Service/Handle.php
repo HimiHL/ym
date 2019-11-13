@@ -38,9 +38,13 @@ class Handle
                     // 如果可以秒杀
                     if ($row['isSeckill'] == 1) {
                         foreach ($row['vaccines'] as $key => $value) {
-                            $vaccine = $this->model->vaccine($value['id']);
-                            if ($vaccine['code'] == '0000') {
-                                $row['vaccines'][$key]['vaccine'] = $vaccine['data'];
+                            try {
+                                $vaccine = $this->model->vaccine($value['id']);
+                                if ($vaccine['code'] == '0000') {
+                                    $row['vaccines'][$key]['vaccine'] = $vaccine['data'];
+                                }
+                            } catch(Exception $e) {
+
                             }
                         }
                         $list[] = $row;
@@ -65,7 +69,25 @@ class Handle
         if ($result['code'] == '0000') {
             return $result['data'];
         }
-        throw new Exception($result['msg']);
+        throw new Exception($result['msg'], 5555);
+    }
+
+    /**
+     * 获取秒杀详情
+     * 
+     */
+    public function moreTimesVaccineDetail($id, $times = 10)
+    {
+        $result = [
+            'code' => '0001'
+        ];
+        $i = 0;
+        while ($result['code'] != '0000') {
+            if ($i >= $times) break;
+            $result = $this->model->vaccineDetail($id);
+            $i++;
+        }
+        return $result['data'];
     }
 
     /**

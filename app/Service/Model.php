@@ -5,6 +5,7 @@ use App\Util;
 use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Pool;
 use GuzzleHttp\TransferStats;
 
 class Model
