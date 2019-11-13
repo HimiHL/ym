@@ -95,12 +95,12 @@ class YueMiaoMulti extends Command
         $this->info("您正在为{$linkMenList[$linkMenIndex]['name']}预约疫苗，[{$vaccineList[$vaccineIndex]['name']}]将于{$startTime}开始");
         // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
-        while($startTimeMillSecond > Util::microtimeInt() + 6) {
+        while($startTimeMillSecond > Util::microtimeInt() + 5) {
             $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
             if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
-            $output->write("\r".(new \DateTime())->format('H:i:s:u'));
+            $output->write("\r".(new \DateTime())->format('H:i:s:u') . ',剩余' . $hasMillSecond / 1000 . '秒');
             usleep(500);
         }
         // Step5 获取秒杀详情 ...至关重要的一步

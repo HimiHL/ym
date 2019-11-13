@@ -41,6 +41,6 @@ class Util
     public static function microtimeInt()
     {
         list($usec, $sec) = explode(" ", microtime());
-        return ((float)$usec + (float)$sec);
+        return (int)(((float)$usec + (float)$sec) * 1000);
     }
 }
