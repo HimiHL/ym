@@ -69,12 +69,14 @@ class YueMiao extends Command
             '序号', 'ID', '姓名', '身份证号'
         ];
 
-        $offsetTime = (int)$input->getOption('offsettime') ?? 700;
+        $offsetTime = $input->getOption('offsettime') ?: 700;
+        $offsetTime = 0 + $offsetTime;
 
         $verifyCode = 0;
         $isMulti = $input->getOption('multi');
 
         $this->info('并发秒杀开关: '. ($isMulti ? '开' : '关'));
+        $this->info('偏移微秒: '. $offsetTime);
         $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
 
         // Step1 选择地区
@@ -147,7 +149,7 @@ class YueMiao extends Command
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
         while($startTimeMillSecond > Util::microtimeInt() + $offsetTime) {
             $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
-            if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
+            if (!$verifyCode && $hasMillSecond / 1000 > 29 && $hasMillSecond / 1000 < 30) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
             $output->write("\r".(new \DateTime())->format('H:i:s:u') . ',剩余' . $hasMillSecond / 1000 . '秒');
@@ -167,7 +169,8 @@ class YueMiao extends Command
         // Step6 秒杀
         $results = [];
         $sign = md5($detail['time'] . 'fuckhacker10000times');
-        foreach ($detail['days'] as $day) {
+        $days = array_reverse($detail['days']);
+        foreach ($days as $day) {
             if ($day['total'] > 0) {
                 $workDate = date('Y-m-d', strtotime($day['day']));
                 if (!$verifyCode) {

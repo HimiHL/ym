@@ -69,13 +69,16 @@ class YueMiaoForce extends Command
             '序号', 'ID', '姓名', '身份证号'
         ];
 
-        $offsetTime = 1500;
-        $times = (int)$input->getOption('times') ?? 1000;
+        $offsetTime = 1000;
+        $times = $input->getOption('times') ?: 1000;
+        $times = 0 + $times;
 
         $verifyCode = 0;
         $isMulti = $input->getOption('multi');
         
         $this->info('并发秒杀开关: '. $isMulti ? '开' : '关');
+        $this->info("偏移微秒:{$offsetTime}");
+        $this->info("循环预约:{$times}次");
         $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
 
         // Step1 选择地区
@@ -148,7 +151,7 @@ class YueMiaoForce extends Command
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
         while($startTimeMillSecond > Util::microtimeInt() + $offsetTime) {
             $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
-            if (!$verifyCode && $hasMillSecond / 1000 > 14 && $hasMillSecond / 1000 < 15) {
+            if (!$verifyCode && $hasMillSecond / 1000 > 29 && $hasMillSecond / 1000 < 30) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
             $output->write("\r".(new \DateTime())->format('H:i:s:u') . ',剩余' . $hasMillSecond / 1000 . '秒');
@@ -163,26 +166,33 @@ class YueMiaoForce extends Command
         }
 
         // Step6 秒杀
+        $excptions = [];
         $results = [];
-        $sign = md5($detail['time'] . 'fuckhacker10000times');
-        foreach ($detail['days'] as $day) {
-            if ($day['total'] > 0) {
-                $workDate = date('Y-m-d', strtotime($day['day']));
-                if (!$verifyCode) {
-                    $verifyCode = $this->getVerifyCode($miao);
+        try {
+            $sign = md5($detail['time'] . 'fuckhacker10000times');
+            foreach ($detail['days'] as $day) {
+                if ($day['total'] > 0) {
+                    $workDate = date('Y-m-d', strtotime($day['day']));
+                    if (!$verifyCode) {
+                        $verifyCode = $this->getVerifyCode($miao);
+                    }
+                    if ($isMulti) {
+                        $miao->multiSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                    } else {
+                        $results[] = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                    }
+                    $verifyCode = 0;
                 }
-                if ($isMulti) {
-                    $miao->multiSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
-                } else {
-                    $results[] = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
-                }
-                $verifyCode = 0;
             }
+        } catch(\Exception $e) {
+            $excptions[] = Util::buildException($e);
         }
 
         $this->info(json_encode($detail));
         $this->info("秒杀结果");
-        $this->info(json_encode($detail));
+        $this->info(json_encode($results));
+        $this->info('异常错误:');
+        $this->danger(json_encode($excptions));
     }
     
     public function getVerifyCode(&$miao)

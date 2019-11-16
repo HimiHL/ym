@@ -6,6 +6,7 @@ use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\TransferStats;
 
 class Model
@@ -91,7 +92,7 @@ class Model
         try {
             return $this->http('GET', '/seckill/vaccine/detailVo.do', [
                 'id' => $id
-            ]);
+            ], false);
         } catch(RequestException $e) {
             echo Util::buildTimePrefix("系统502，重试获取秒杀\n");
             if (502 == $e->getResponse()->getStatusCode()) {
@@ -145,7 +146,6 @@ class Model
         echo Util::buildTimePrefix("开始提交并发预约{$total}次\n");
         $requests = function($total) use($id, $index, $memberId, $date, $sign, $verifyCode) {
             for ($i = 0; $i < $total; $i++) {
-                $this->getValidateCode();
                 yield new Request('GET', '/seckill/vaccine/subscribe.do?' . http_build_query([
                     'departmentVaccineId' => $id,
                     'vaccineIndex' => $index,
@@ -173,7 +173,12 @@ class Model
 
     public function getVerifyCode()
     {
-        return $this->http('GET', '/seckill/validateCode/vcode.do');
+        try {
+            return $this->http('GET', '/seckill/validateCode/vcode.do');
+        } catch(RequestException $e) {
+            echo Util::buildTimePrefix("系统状态码: {$e->getResponse()->getStatusCode()}，重试获取验证码\n");
+            return $this->http('GET', '/seckill/validateCode/vcode.do');
+        }
     }
 
     public function workDays($departmentCode, $vaccineCode, $vaccineId,  $linkManId)

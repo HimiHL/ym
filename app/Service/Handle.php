@@ -86,6 +86,7 @@ class Handle
             if ($i >= $times) break;
             $result = $this->model->vaccineDetail($id);
             $i++;
+            usleep(200);
         }
         return $result['data'];
     }
