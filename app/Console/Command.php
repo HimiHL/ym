@@ -30,7 +30,7 @@ class Command extends BaseCommand
         }
         if (isset($this->requireOption)) {
             foreach ($this->requireOption as $requireOption) {
-                $this->addOption($requireOption['key'], $requireOption['k'] ?? null, InputOption::VALUE_REQUIRED, $requireArgument['intro']);
+                $this->addOption($requireOption['key'], $requireOption['k'] ?? null, InputOption::VALUE_REQUIRED, $requireOption['intro']);
             }
         }
         if (isset($this->option)) {

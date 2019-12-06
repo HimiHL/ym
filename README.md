@@ -20,9 +20,6 @@
 
 ```json
 {
-    "cookie": "", // 抓包的header中的cookie
-    "tk": "", // 抓包的header中的tk
-    "st": "", // 抓包的header中的st
     "CJY_POWER": false, // 是否自动打码，超级鹰
     "CJY_USER": "", // 超级鹰账号
     "CJY_PASS": "", // 超级鹰密码
@@ -41,28 +38,35 @@ composer install
 ##### 2. 获取成都区可秒杀的医院列表(含预约ID)
 
 ``` shell
-php artisan vlist
+php artisan list:vacc --token=54fd0645a23f60ab9c395fc4c9e5d646_47b6950ae6b21e0823f6fc5da8fd5223
+```
+
+查看参数含义
+
+```
+php artisan help list:vacc
 ```
 
 ##### 3. 获取当前账号绑定的身份列表(含身份ID)
 
 ```shell
-php artisan mlist
+php artisan list:member --token=54fd0645a23f60ab9c395fc4c9e5d646_47b6950ae6b21e0823f6fc5da8fd5223
+```
+
+查看参数含义
+
+```
+php artisan help list:member
 ```
 
 ##### 4. 执行秒杀
 
-> MemberId 是指通过3步骤获取的身份ID
-> VaccineId 是指通过2步骤获取的预约ID
-
 ```shell
-php artisan ym <MemberId> <VaccineId>
+php artisan ym --token=54fd0645a23f60abxxxxxxxxxxxxx_47b6950ae6b21e0823f6fcxxxxxxx --code=5101 --vid=0000 --mid=0000000 --retry=0
 ```
 
-##### 5. 执行秒杀【全套流程，耗时较长】
+查看参数含义
 
-```shell
-php artisan nbym
 ```
-
-
+php artisan help ym
+```

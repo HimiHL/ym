@@ -1,21 +1,14 @@
 <?php
 namespace App\Service;
 
-use App\Util;
-use Exception;
-use GuzzleHttp\Pool;
-use GuzzleHttp\Psr7\Request;
+use App\Service\Request;
 
 class Handle
 {
     public $model;
-    public function __construct()
+    public function __construct($token)
     {
-        $token = getenv('TK');
-        if (!$token) {
-            throw new Exception('请配置TK');
-        }
-        $this->model = new Model($token);
+        $this->model = new Request($token);
     }
 
     /**
@@ -43,7 +36,7 @@ class Handle
                                 if ($vaccine['code'] == '0000') {
                                     $row['vaccines'][$key]['vaccine'] = $vaccine['data'];
                                 }
-                            } catch(Exception $e) {
+                            } catch(\Exception $e) {
 
                             }
                         }
@@ -69,26 +62,16 @@ class Handle
         if ($result['code'] == '0000') {
             return $result['data'];
         }
-        throw new Exception($result['msg'], 5555);
+        throw new \Exception($result['msg'], 5555);
     }
 
     /**
      * 获取秒杀详情
-     * 
+     * 返回包含code的结果
      */
-    public function moreTimesVaccineDetail($id, $times = 10)
+    public function moreTimesVaccineDetail($id)
     {
-        $result = [
-            'code' => '0001'
-        ];
-        $i = 0;
-        while ($result['code'] != '0000') {
-            if ($i >= $times) break;
-            $result = $this->model->vaccineDetail($id);
-            $i++;
-            usleep(200);
-        }
-        return $result['data'];
+        return $this->model->vaccineDetail($id);
     }
 
     /**
@@ -142,7 +125,7 @@ class Handle
         if ($result['code'] == '0000') {
             return $result['data'];
         }
-        throw new Exception($result['msg']);
+        throw new \Exception($result['msg']);
     }
 
     public function getWorkDays($departmentCode, $vaccineCode, $vaccineId, $memberId)
@@ -157,39 +140,11 @@ class Handle
         return $regions['data'] ?? [];
     }
 
-    public function forceSubmit($id, $memberId, $date, $sign, $total = 10)
+    public function checkToken()
     {
-        $header = $this->model->header;
-        $client = $this->model->client;
-        $route = '/seckill/vaccine/subscribe.do?';
-
-        $requests = function($total) use($route, $header, $id, $memberId, $date, $sign) {
-            for ($i = 0; $i < $total; $i++) {
-                $this->getValidateCode();
-                for ($j = 0; $j < 100; $j++) {
-                    yield new Request('GET', $route . http_build_query([
-                        'departmentVaccineId' => $id,
-                        'vaccineIndex' => 1,
-                        'linkmanId' => $memberId,
-                        'subscribeDate' => $date,
-                        'sign' => $sign,
-                        'vcode' => $j
-                    ]), $header);
-                }
-            }
-        };
-
-        $pool = new Pool($client, $requests($total), [
-            'concurrency' => 100,
-            'fulfilled' => function($response, $index) {
-                echo Util::buildTimePrefix("[索引:{$index}请求完成:{$response->getBody()}\n");
-            },
-            'rejected' => function($reason, $index) {
-                echo Util::buildTimePrefix("[索引:{$index}请求失败:{$reason}\n");
-            }
-        ]);
-
-        $promise = $pool->promise();
-        $promise->wait();
+        $response = $this->model->checkToken();
+        if ($response['code'] == '3101') {
+            throw new \Exception($response['msg'], 3101);
+        }
     }
 }

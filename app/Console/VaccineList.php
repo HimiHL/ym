@@ -4,8 +4,6 @@ namespace App\Console;
 use App\Service\Handle;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 
 class VaccineList extends Command
 {
@@ -15,6 +13,12 @@ class VaccineList extends Command
     ];
     protected $optionalArgument = [
     ];
+    protected $requireOption = [
+        [
+            'key' => 'token',
+            'intro' => '约苗Token'
+        ]
+    ];
     public function __construct()
     {
         parent::__construct();
@@ -23,8 +27,13 @@ class VaccineList extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
+        $token = $input->getOption('token') ?: false;
+        if (!$token) {
+            $this->info("请给我Token");
+            exit;
+        }
         
-        $miao = new Handle;
+        $miao = new Handle($token);
         $list = $miao->getVaccines();
         $headers = [
             '预约ID', '医院', '地址', '预约时间', '服务器时间', '本地时间'

@@ -13,6 +13,12 @@ class MemberList extends Command
     ];
     protected $optionalArgument = [
     ];
+    protected $requireOption = [
+        [
+            'key' => 'token',
+            'intro' => '约苗Token'
+        ]
+    ];
     public function __construct()
     {
         parent::__construct();
@@ -21,8 +27,13 @@ class MemberList extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
+        $token = $input->getOption('token') ?: false;
+        if (!$token) {
+            $this->info("请给我Token");
+            exit;
+        }
 
-        $miao = new Handle;
+        $miao = new Handle($token);
         $list = $miao->getMemberList();
         $headers = [
             '身份ID', '姓名', '身份证号码', '性别', '用户ID'

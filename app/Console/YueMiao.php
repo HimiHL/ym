@@ -16,6 +16,10 @@ class YueMiao extends Command
     protected $optionalArgument = [
     ];
     protected $requireOption = [
+        [
+            'key' => 'token',
+            'intro' => '约苗Token'
+        ]
     ];
     protected $option = [
         [
@@ -31,8 +35,12 @@ class YueMiao extends Command
             'intro' => '预约人ID'
         ],
         [
-            'key' => 'offsettime',
-            'intro' => '偏移毫秒，默认700'
+            'key' => 'mode',
+            'intro' => '模式，1随机日期，2所有日期，默认1'
+        ],
+        [
+            'key' => 'retry',
+            'intro' => '重试次数，默认0'
         ]
     ];
     protected $noneOption = [
@@ -49,7 +57,13 @@ class YueMiao extends Command
     public function execute(InputInterface $input, OutputInterface $output)
     {
         parent::execute($input, $output);
-        $miao = new Handle;
+        $token = $input->getOption('token') ?: false;
+        if (!$token) {
+            $this->info("请给我Token");
+            exit;
+        }
+
+        $miao = new Handle($token);
         $regionCode = 0;
         $regionList = [];
         $regionHeader = [
@@ -69,15 +83,19 @@ class YueMiao extends Command
             '序号', 'ID', '姓名', '身份证号'
         ];
 
-        $offsetTime = $input->getOption('offsettime') ?: 700;
-        $offsetTime = 0 + $offsetTime;
+        $mode = $input->getOption('mode') ?: 1;
+        $mode = 0 + $mode;
+
+        $retry = $input->getOption('retry') ?: 0;
+        $retry = 0 + $retry;
 
         $verifyCode = 0;
         $isMulti = $input->getOption('multi');
 
         $this->info('并发秒杀开关: '. ($isMulti ? '开' : '关'));
-        $this->info('偏移微秒: '. $offsetTime);
+        $this->info('模式: '. $mode == 1 ? '随机日期' : '所有日期');
         $this->info('超级鹰自动打码状态: '. (getenv('CJY_POWER') ? '开' : '关'));
+        $this->info("将在秒杀一次失败后重试{$retry}次");
 
         // Step1 选择地区
         $regionCode = $input->getOption('code');
@@ -145,49 +163,102 @@ class YueMiao extends Command
             $linkMenId = $linkMenList[$linkMenIndex]['id'];
         }
 
+        $verifyCodeRandomSecond = rand(25, 40);
+        $this->info("将提前{$verifyCodeRandomSecond}秒获取验证码");
+
+        $randomTime = rand(45, 60);
+        $this->info("预计开始前{$randomTime}微秒执行查询");
         // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
-        while($startTimeMillSecond > Util::microtimeInt() + $offsetTime) {
+        while($startTimeMillSecond > Util::microtimeInt() + $randomTime) {
             $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
-            if (!$verifyCode && $hasMillSecond / 1000 > 29 && $hasMillSecond / 1000 < 30) {
+            if (!$verifyCode && $hasMillSecond / 1000 > ($verifyCodeRandomSecond - 1) && $hasMillSecond / 1000 < $verifyCodeRandomSecond) {
                 $verifyCode = $this->getVerifyCode($miao);
             }
-            $output->write("\r".(new \DateTime())->format('H:i:s:u') . ',剩余' . $hasMillSecond / 1000 . '秒');
+            $output->write("\r[".(new \DateTime())->format('H:i:s:u') . ']剩余' . $hasMillSecond / 1000 . '秒');
             usleep(500);
         }
 
-        // Step5 获取秒杀详情 ...至关重要的一步
+        // 获取秒杀详情
         try {
-            $detail = $miao->vaccineDetail($vaccineId);
+            $detail = [];
+            $j = 0;
+            while(true) {
+                $j++;
+                $result = $miao->moreTimesVaccineDetail($vaccineId);
+                if ($result['code'] == '0000') {
+                    $detail = $result['data'];
+                    break;
+                }
+                if ($j > 1000) {
+                    break;
+                }
+                usleep(10);
+            }
         } catch(\Exception $e) {
-            $this->danger($e->getMessage());
-            if ($e->getCode() === 5555) {
-                $detail = $miao->vaccineDetail($vaccineId);
-            }
+            $this->danger('获取秒杀详情时遇到了异常: ' . $e->getMessage());
         }
 
+        $this->info("获取详情{$j}次");
+        $this->info("可选的查询日期: " . json_encode($detail['days'] ?? []));
+        $this->info("排队时间: {$detail['time']} || " . sprintf('%s.%s',date('Y-m-d H:i:s',$detail['time'] / 1000), substr($detail['time'], 10, 3)));
+
+        $sleepTime = 999999;
+        $this->info("将在查询前模拟暂停{$sleepTime}微秒");
+        if ($sleepTime > 0) {
+            usleep($sleepTime);
+        }
         // Step6 秒杀
-        $results = [];
-        $sign = md5($detail['time'] . 'fuckhacker10000times');
-        $days = array_reverse($detail['days']);
-        foreach ($days as $day) {
-            if ($day['total'] > 0) {
+        $exceptions = [];
+        try {
+            $sign = md5($detail['time'] . 'fuckhacker10000times');
+            if ($mode == 1) {
+                $index = rand(0, count($detail['days'])-1);
+                $day = $detail['days'][$index];
                 $workDate = date('Y-m-d', strtotime($day['day']));
-                if (!$verifyCode) {
-                    $verifyCode = $this->getVerifyCode($miao);
+                $this->info("日期: " . $workDate);
+                // 根据用户配置的重试次数开始
+                for ($i = 0; $i <= $retry; $i++) {
+                    if (!$verifyCode) {
+                        $verifyCode = $this->getVerifyCode($miao);
+                    }
+                    $result = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                    $this->info("结果: " . json_encode($result));
+                    if ($result['ok']) {
+                        $this->info("恭喜！您已查询到{$workDate}的疫苗！");
+                        break;
+                    }
+                    $verifyCode = 0;
                 }
-                if ($isMulti) {
-                    $miao->multiSubmit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
-                } else {
-                    $results[] = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+            } elseif ($mode == 2) {
+                foreach (($detail['days'] ?? '') as $day) {
+                    if ($day['total'] > 0) {
+                        $workDate = date('Y-m-d', strtotime($day['day']));
+                        $this->info("日期: " . $workDate);
+                        // 根据用户配置的重试次数开始
+                        for ($i = 0; $i <= $retry; $i++) {
+                            if (!$verifyCode) {
+                                $verifyCode = $this->getVerifyCode($miao);
+                            }
+                            $result = $miao->submit($vaccineId, $linkMenId, $verifyCode, $workDate, $sign);
+                            $this->info("结果: " . json_encode($result));
+                            if ($result['ok']) {
+                                $this->info("恭喜！您已查询到{$workDate}的疫苗！");
+                                break 2;
+                            }
+                            $verifyCode = 0;
+                        }
+                    }
                 }
-                $verifyCode = 0;
             }
+        } catch(\Exception $e) {
+            $exceptions[] = Util::buildException($e);
         }
 
+        $this->info("秒杀结果:");
         $this->info(json_encode($detail));
-        $this->info("秒杀结果");
-        $this->info(json_encode($detail));
+
+        $this->danger("异常错误: " . json_encode($exceptions), false);
     }
     
     public function getVerifyCode(&$miao)

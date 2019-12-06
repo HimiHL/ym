@@ -2,26 +2,25 @@
 namespace App\Service;
 
 use App\Util;
-use Exception;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Pool;
-use GuzzleHttp\Psr7\Request;
+use GuzzleHttp\Psr7\Request as GuzzleHttpRequest;
 use GuzzleHttp\TransferStats;
 
-class Model
+class Request
 {
     public $domain = 'https://wx.healthych.com';
     public $header = [
         'Host' => 'wx.healthych.com',
         'Accept-Encoding' => 'gzip, deflate, br',
-        'Cookie' => '',
+        'Cookie' => 'UM_distinctid=16e1f707fb2ab-0f3389883b93a8-f044405-38400-16e1f707fb918; __SDID=37d442ed6319f388; _xzkj_=45a45b6066d147243c0e03295abd879d_923fdbdcb168d5960d16dbbf17f186d7; CNZZDATA1261985103=1507093689-1572482047-%7C1572848441; _xxhm_=%7B%22address%22%3A%22%22%2C%22awardPoints%22%3A0%2C%22birthday%22%3A868032000000%2C%22createTime%22%3A1566004028000%2C%22headerImg%22%3A%22http%3A%2F%2Fthirdwx.qlogo.cn%2Fmmopen%2FoCVIF9sBEcpGwickWibIRvKpsEbsKdt04aEFxSoRkBlln6PbpNTaUI7qUUIDSZuozL9CeFYFGOFBCP7WEzEacZEod3gZA77ibZic%2F132%22%2C%22id%22%3A3435493%2C%22idCardNo%22%3A%22513424199707050420%22%2C%22isRegisterHistory%22%3A0%2C%22latitude%22%3A30.548683%2C%22longitude%22%3A104.058884%2C%22mobile%22%3A%2218111630102%22%2C%22modifyTime%22%3A1574663917000%2C%22name%22%3A%22%E5%88%98%E7%A7%91%E8%8E%89%22%2C%22nickName%22%3A%22HaLi%22%2C%22openId%22%3A%22og46NxNpYO5LgmikTvC8lnOUbzMo%22%2C%22regionCode%22%3A%22510109%22%2C%22registerTime%22%3A1566059582000%2C%22sex%22%3A2%2C%22source%22%3A1%2C%22uFrom%22%3A%22cdbdbsy%22%2C%22unionid%22%3A%22o8NLkwYul__l8ttj0GY_iri9-iR8%22%2C%22wxSubscribed%22%3A1%2C%22yn%22%3A1%7D',
         'tk' => '',
         'Connection' => 'keep-alive',
         'Accept' => 'application/json, text/plain, */*',
         'User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.8(0x17000820) NetType/4G Language/zh_CN',
         'Referer' => 'https://wx.healthych.com/index.html',
-        'st' => '',
+        'st' => '47d866523e30616aca1b4a6c221758a2',
         'Accept-Language' => 'zh-cn',
     ];
     public $client;
@@ -40,8 +39,25 @@ class Model
             'base_uri' => $this->domain,
             'timeout'  => 999999,
             'headers' => $this->header
-
         ]);
+        $result = $this->findUser();
+        $this->header['Cookie'] = $this->buildCookie($result['data'], $token);
+    }
+
+    private function buildCookie($data, $tk)
+    {
+        $headers = [
+            'UM_distinctid' => '16e1f707fb2ab-0f3389883b93a8-f044405-38400-16e1f707fb918',
+            '__SDID' => '37d442ed6319f388',
+            '_xzkj_' => $tk,
+            'CNZZDATA1261985103' => '1507093689-1572482047-%7C1572848441',
+            '_xxhm_' => urlencode(json_encode($data))
+        ];
+        $header = '';
+        foreach ($headers as $key => $header) {
+            $header .= "{$key}={$header}; ";
+        }
+        return $header;
     }
 
     /**
@@ -65,6 +81,11 @@ class Model
             'regionCode' => $regionCode,
             'isOpen' => 1
         ]);
+    }
+
+    public function findUser()
+    {
+        return $this->http('GET', '/passport/user/findLoginUserByKey.do',[]);
     }
 
     /**
@@ -146,7 +167,7 @@ class Model
         echo Util::buildTimePrefix("开始提交并发预约{$total}次\n");
         $requests = function($total) use($id, $index, $memberId, $date, $sign, $verifyCode) {
             for ($i = 0; $i < $total; $i++) {
-                yield new Request('GET', '/seckill/vaccine/subscribe.do?' . http_build_query([
+                yield new GuzzleHttpRequest('GET', '/seckill/vaccine/subscribe.do?' . http_build_query([
                     'departmentVaccineId' => $id,
                     'vaccineIndex' => $index,
                     'linkmanId' => $memberId,
@@ -176,7 +197,7 @@ class Model
         try {
             return $this->http('GET', '/seckill/validateCode/vcode.do');
         } catch(RequestException $e) {
-            echo Util::buildTimePrefix("系统状态码: {$e->getResponse()->getStatusCode()}，重试获取验证码\n");
+            echo Util::buildTimePrefix("系统状态码:{$e->getResponse()->getStatusCode()}，重试获取验证码\n");
             return $this->http('GET', '/seckill/validateCode/vcode.do');
         }
     }
@@ -209,22 +230,29 @@ class Model
         ]);
     }
 
+    public function checkToken()
+    {
+        return $this->http('GET', '/base/region/childRegions.do', [
+            'parentCode' => 0
+        ], false);
+    }
+
     private function http($method = 'POST', $route, $body = [], $checkResponse = true)
     {
-        echo Util::buildTimePrefix("开始请求{$route}\n");
+        // echo Util::buildTimePrefix("开始请求{$route}\n");
         $result = $this->client->request($method, $route, [
             'verify' => false,
             'query' => $body,
             'on_stats' => function(TransferStats $stats) {
-                echo Util::buildTimePrefix("请求结束\n");
-                echo Util::buildTimePrefix("请求耗时:". $stats->getTransferTime() ."\n");
+                // echo Util::buildTimePrefix("请求结束\n");
+                // echo Util::buildTimePrefix("请求耗时:". $stats->getTransferTime() ."\n");
             }
         ]);
 
 
         $data = json_decode($result->getBody()->getContents(), true);
         if ($checkResponse && $data['code'] !== '0000') {
-            throw new Exception($data['msg']);
+            throw new \Exception($data['msg']);
         }
         return $data;
     }
