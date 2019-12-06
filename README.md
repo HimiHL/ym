@@ -1,12 +1,12 @@
 ## 使用前须知
 
-务必替换 `app/Service/Handle.php`文件中的`__construct()`修改Cookie|tk|st三个参数，身份凭证有效期大概为6个小时左右
+身份凭证Token有效期大概为6个小时左右
 
 可使用`Stream`抓包获取
 
 ## 使用Phar执行命令
 
-如果不关心代码结构，可以使用Phar执行，可省略第一步，将`php artisan ***` 替换成`php YueMiao.phar ***`即可
+如果不关心代码结构，可以使用Phar执行，可省略第一步，将`php artisan ***` 替换成`php YueMiao ***`即可
 
 
 ## 文件结构
@@ -29,7 +29,7 @@
 
 ## 功能列表
 
-##### 1. 通过Composer安装拓展包
+##### 1. [源码运行必做]通过Composer安装拓展包
 
 ``` shell
 composer install
