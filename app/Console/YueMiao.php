@@ -203,10 +203,10 @@ class YueMiao extends Command
         $this->info("可选的查询日期: " . json_encode($detail['days'] ?? []));
         $this->info("排队时间: {$detail['time']} || " . sprintf('%s.%s',date('Y-m-d H:i:s',$detail['time'] / 1000), substr($detail['time'], 10, 3)));
 
-        $sleepTime = 999999;
-        $this->info("将在查询前模拟暂停{$sleepTime}微秒");
-        if ($sleepTime > 0) {
-            usleep($sleepTime);
+        while(($startTimeMillSecond + 1000000) > Util::microtimeInt() + $randomTime) {
+            $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
+            $output->write("\r[".(new \DateTime())->format('H:i:s:u') . ']模拟暂停-倒计时' . $hasMillSecond / 1000 . '秒');
+            usleep(500);
         }
         // Step6 秒杀
         $exceptions = [];
