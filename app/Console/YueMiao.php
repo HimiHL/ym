@@ -166,7 +166,7 @@ class YueMiao extends Command
         $verifyCodeRandomSecond = rand(25, 40);
         $this->info("将提前{$verifyCodeRandomSecond}秒获取验证码");
 
-        $randomTime = rand(45, 60);
+        $randomTime = rand(25, 40);
         $this->info("预计开始前{$randomTime}微秒执行查询");
         // Step4 倒计时
         $this->danger("活动将于{$startTime}开始，正在倒计时中..（请注意在剩余15秒左右需要输入验证码，务必时刻关注）");
@@ -203,7 +203,7 @@ class YueMiao extends Command
         $this->info("可选的查询日期: " . json_encode($detail['days'] ?? []));
         $this->info("排队时间: {$detail['time']} || " . sprintf('%s.%s',date('Y-m-d H:i:s',$detail['time'] / 1000), substr($detail['time'], 10, 3)));
         $this->info('模拟暂停');
-        while(($startTimeMillSecond + 1000) > Util::microtimeInt()) {
+        while(($detail['time'] + 1000) > Util::microtimeInt() + $randomTime) {
             // $hasMillSecond = $startTimeMillSecond - Util::microtimeInt();
             // $output->write("\r[".(new \DateTime())->format('H:i:s:u') . ']模拟暂停-倒计时' . $hasMillSecond / 1000 . '秒');
             usleep(500);
