@@ -10,11 +10,8 @@ import (
 	"miaomiao/util"
 	"net/url"
 	"os"
-	"os/signal"
 	"strconv"
-	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -25,8 +22,6 @@ var tk string
 func main() {
 	// 获取本地与服务器的时间差
 	timeNotice()
-	// 监听退出
-	listenExit()
 
 	log.Danger("操作方式：方向键上下键选择，回车键确认选中")
 	// 获取Token
@@ -54,29 +49,6 @@ func timeNotice() {
 	}
 }
 
-func listenExit() {
-	//创建监听退出chan
-	c := make(chan os.Signal)
-	//监听指定信号 ctrl+c kill
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGUSR1, syscall.SIGUSR2)
-	go func() {
-		for s := range c {
-			switch s {
-			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT:
-				proxy.StopProxy()
-				proxy.CloseNetworkProxy()
-				os.Exit(0)
-			case syscall.SIGUSR1:
-				fmt.Println("usr1", s)
-			case syscall.SIGUSR2:
-				fmt.Println("usr2", s)
-			default:
-				fmt.Println("other", s)
-			}
-		}
-	}()
-}
-
 /** 第一步: 获取Token */
 // 获取Token
 func questionToken() string {
@@ -92,32 +64,8 @@ func questionToken() string {
 		return inputToken()
 	} else {
 		installCrt()
-		network := selectNetwork()
-		return proxy.Handle(network)
+		return proxy.Handle()
 	}
-}
-
-// 选择网卡
-func selectNetwork() string {
-	log.Info("请输入密码(如需要)以获取网络设备信息：")
-	result, _ := proxy.Cmd("sudo networksetup -listallnetworkservices")
-	arr := strings.Split(result, "\n")
-	network := ""
-	networkPrompt := &survey.Select{
-		Message: "请选择正在使用网络的设备:",
-		Options: arr[1:],
-	}
-	survey.AskOne(networkPrompt, &network)
-	// 开始检测是否已有代理
-
-	status, _ := proxy.Cmd("scutil --proxy | grep -c 'Enable\\s*:\\s*1'")
-	line := strings.Split(status, "\n")
-	if line[0] == "1" {
-		log.Danger("当前网络已经开启了其他代理，无法启动")
-		exit()
-	}
-
-	return strings.Trim(network, " ")
 }
 
 // 输入Token
@@ -174,11 +122,13 @@ CDPlL4gNB6s=
 		fmt.Println(err)
 	}
 
-	_, e := proxy.Cmd("sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain proxy.crt")
+	_, e := proxy.WinCmd("certutil -addstore -f 'ROOT' proxy.crt")
 	if e != nil {
 		log.Danger("安装证书时出现了错误: " + e.Error())
 		exit()
 	}
+	// 删除文件
+	proxy.WinCmd("del proxy.crt")
 }
 
 /** 第二步： 选择预约人 */
