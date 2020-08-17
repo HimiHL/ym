@@ -14,6 +14,18 @@ func TimeNow(token string) model.TimeNowModel {
 	return response
 }
 
+// TimeNowTest 当前服务器时间
+func TimeNowTest(token string, times int) []model.TimeNowModel {
+	var response model.TimeNowModel
+	var resultChan = make([]model.TimeNowModel, 0, times)
+	jsonStrList := MultiGet(model.APITimeNow, token, times)
+	for i := range jsonStrList {
+		json.Unmarshal([]byte(jsonStrList[i]), &response)
+		resultChan = append(resultChan, response)
+	}
+	return resultChan
+}
+
 // Regions 获取地区信息
 func Regions(token string, parentCode string) model.RegionsModel {
 	var response model.RegionsModel
@@ -56,4 +68,17 @@ func Subscribe(token string, id string, linkmanID string, idCard string) model.R
 	jsonStr := GET(route, token)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
+}
+
+// MultiSubscribe 秒杀/批量
+func MultiSubscribe(token string, id string, linkmanID string, idCard string, times int) []model.ResponseModel {
+	var response model.ResponseModel
+	var resultChan = make([]model.ResponseModel, 0, times)
+	route := fmt.Sprintf("%s?seckillId=%s&vaccineIndex=1&linkmanId=%s&idCardNo=%s", model.APISubscribe, id, linkmanID, idCard)
+	jsonStrList := MultiGet(route, token, times)
+	for i := range jsonStrList {
+		json.Unmarshal([]byte(jsonStrList[i]), &response)
+		resultChan = append(resultChan, response)
+	}
+	return resultChan
 }
