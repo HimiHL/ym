@@ -46,7 +46,7 @@ func LinkMans(token string) model.LinkMansModel {
 // SaveLinkMan 秒杀
 func SaveLinkMan(token string, name string, idCard string, regionCode string, birthday string) model.ResponseModel {
 	var response model.ResponseModel
-	route := fmt.Sprintf("%s?sex=1&isDefault=2&relationType=7&name=%s&idCardNo=%s&birthday=%s&regionCode=%s", model.APISaveLinkMan, name, idCard, birthday, regionCode)
+	route := fmt.Sprintf("%s?sex=2&isDefault=2&relationType=7&name=%s&idCardNo=%s&birthday=%s&regionCode=%s", model.APISaveLinkMan, name, idCard, birthday, regionCode)
 	jsonStr := GET(route, token)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
