@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
@@ -383,6 +382,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 			log.Danger("任务异常退出")
 		}
 	}()
+
 	startTimeMillSecond := util.TimestampFormat(startTime)
 	log.Danger(fmt.Sprintf("提前(%s)毫秒执行秒杀：", strconv.Itoa(Delay)))
 	log.Danger(fmt.Sprintf("并发秒杀(%s)次", strconv.Itoa(ConcurrentTimes)))
@@ -399,21 +399,30 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		}
 	}
 
-	// 开始执行秒杀
-	var wg sync.WaitGroup
-	for i := 0; i < ConcurrentTimes; i++ {
-		go func() {
-			wg.Add(1)
-			defer wg.Done()
-			subscribeResult := request.Subscribe(tk, VaccineID, MemberID, MemberIDCard)
-			if subscribeResult.Ok {
-				log.Info("秒杀成功")
-			} else {
-				log.Danger("秒杀失败")
-			}
-		}()
+	results := request.MultiSubscribe(tk, VaccineID, MemberID, MemberIDCard, ConcurrentTimes)
+	for i := range results {
+		if results[i].Ok {
+			log.Success("秒杀成功")
+		} else {
+			log.Danger(results[i].Msg)
+		}
 	}
-	wg.Wait()
+
+	// // 开始执行秒杀
+	// var wg sync.WaitGroup
+	// for i := 0; i < ConcurrentTimes; i++ {
+	// 	wg.Add(1)
+	// 	go func() {
+	// 		defer wg.Done()
+	// 		subscribeResult := request.Subscribe(tk, VaccineID, MemberID, MemberIDCard)
+	// 		if subscribeResult.Ok {
+	// 			log.Info("秒杀成功")
+	// 		} else {
+	// 			log.Danger("秒杀失败")
+	// 		}
+	// 	}()
+	// }
+	// wg.Wait()
 }
 
 func exit() {
