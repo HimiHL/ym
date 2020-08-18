@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -348,22 +347,30 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 			fmt.Printf("\r%s", time.Now().Format("2006-01-02 15:04:05.000000"))
 		}
 	}
-
-	// 开始执行秒杀
-	var wg sync.WaitGroup
-	for i := 0; i < ConcurrentTimes; i++ {
-		go func() {
-			wg.Add(1)
-			defer wg.Done()
-			subscribeResult := request.Subscribe(tk, VaccineID, MemberID, MemberIDCard)
-			if subscribeResult.Ok {
-				log.Info("秒杀成功")
-			} else {
-				log.Danger("秒杀失败")
-			}
-		}()
+	results := request.MultiSubscribe(tk, VaccineID, MemberID, MemberIDCard, ConcurrentTimes)
+	for i := range results {
+		if results[i].Ok {
+			log.Success("秒杀成功")
+		} else {
+			log.Danger(results[i].Msg)
+		}
 	}
-	wg.Wait()
+
+	// // 开始执行秒杀
+	// var wg sync.WaitGroup
+	// for i := 0; i < ConcurrentTimes; i++ {
+	// 	go func() {
+	// 		wg.Add(1)
+	// 		defer wg.Done()
+	// 		subscribeResult := request.Subscribe(tk, VaccineID, MemberID, MemberIDCard)
+	// 		if subscribeResult.Ok {
+	// 			log.Info("秒杀成功")
+	// 		} else {
+	// 			log.Danger("秒杀失败")
+	// 		}
+	// 	}()
+	// }
+	// wg.Wait()
 }
 
 func exit() {
