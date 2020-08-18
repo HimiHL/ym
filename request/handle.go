@@ -118,10 +118,10 @@ func Subscribe(token string, id string, linkmanID string, idCard string) model.R
 	return response
 }
 
-// Stock 获取是否可以秒杀
+// Stock 检查库存
 func Stock(token string, id string) model.StockModel {
 	var response model.StockModel
-	route := fmt.Sprintf("%s?id=%s", model.APISubscribe, id)
+	route := fmt.Sprintf("%s?id=%s", model.APICheckStock, id)
 	jsonStr := GET(route, token, false)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response

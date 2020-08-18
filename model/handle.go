@@ -24,6 +24,9 @@ var APIVaccine = "/seckill/seckill/detail.do"
 // APISubscribe 秒杀
 var APISubscribe = "/seckill/seckill/subscribe.do"
 
+// APICheckStock 检查库存
+var APICheckStock = "/seckill/seckill/checkstock2.do"
+
 // APISubscribeDays 秒杀选择日期
 var APISubscribeDays = "/seckill/seckill/subscribeDays.do"
 

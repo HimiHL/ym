@@ -450,7 +450,7 @@ func confirmOrder(VaccineID string, OrderID string) {
 			TimesList := make([]string, 0)
 			TimeMap := make(map[string]int)
 			for i := 0; i < len(TimesResult.Data); i++ {
-				name := fmt.Sprintf("[%d]%s - %d", TimesResult.Data[i].MaxSub, TimesResult.Data[i].StartTime, TimesResult.Data[i].EndTime)
+				name := fmt.Sprintf("[%d]%s - %s", TimesResult.Data[i].MaxSub, TimesResult.Data[i].StartTime, TimesResult.Data[i].EndTime)
 				TimesList = append(TimesList, name)
 				TimeMap[name] = i
 			}
@@ -508,6 +508,12 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 	if stockResult.Ok {
 		// 开始签名
 		salt := "ux$ad70*b"
+		/**
+		签名算法可能有问题
+		因为参与签名的三个参数在理论上来说都是int，所以有可能是三者之和
+		但是！因为VaccineID是从页面路由上拿到的，所以VaccineID是string，在JS弱类型语言中，第一个是string，所以会变成连接字符串
+		暂时不确定是连接字符串还是求和
+		*/
 		sign := util.Md5(util.Md5(VaccineID+MemberID+stockResult.Data.St) + salt)
 
 		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
