@@ -1,2 +1,2 @@
 proxy.crt
-runtime.log
+*.log

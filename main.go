@@ -19,19 +19,26 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 )
 
-var tk string
+// Token 请求Token
+var Token string
 
 func main() {
+	util.LogFileName = strconv.FormatInt(util.TimestampNow(), 10)
 	// 获取本地与服务器的时间差
 	timeNotice()
 	// 监听退出
 	listenExit()
-
 	log.Danger("操作方式：方向键上下键选择，回车键确认选中")
 	// 获取Token
-	tk = questionToken()
+	Token = questionToken()
+	// 打印Token
+	log.Success(Token)
+	// 选择联系人的操作方式
+	for !questionMember() {
+
+	}
 	// 获取预约人信息
-	MemberID, MemberIDCard := questionMember()
+	MemberID, MemberIDCard := selectMember()
 	// 选择地区
 	RegionCode := questionRegion()
 	// 选择门诊
@@ -41,7 +48,7 @@ func main() {
 	// 设置并发次数
 	Concurrent := questionConcurrent()
 	// 开始秒杀
-	Handle(MemberID, MemberIDCard, VaccineID, StartTime, tk, Delay, Concurrent)
+	Handle(MemberID, MemberIDCard, VaccineID, StartTime, Token, Delay, Concurrent)
 }
 
 func timeNotice() {
@@ -121,16 +128,16 @@ func selectNetwork() string {
 
 // 输入Token
 func inputToken() string {
-	tk := ""
+	Token := ""
 	prompt := &survey.Input{
 		Message: "输入Token", Help: "使用抓包工具获取`约苗`/`秒苗`请求Header中的TK字段"}
-	survey.AskOne(prompt, &tk, survey.WithValidator(survey.Required), survey.WithValidator(func(val interface{}) error {
+	survey.AskOne(prompt, &Token, survey.WithValidator(survey.Required), survey.WithValidator(func(val interface{}) error {
 		if _, ok := val.(string); !ok {
 			return errors.New("输入的文本不符合要求")
 		}
 		return nil
 	}))
-	return tk
+	return Token
 }
 
 // installCrt 安装TLS证书
@@ -143,7 +150,7 @@ cnMxFjAUBgNVBAMTDWdvLW1pdG0tcHJveHkwIBcNMTgwMzE4MDkwMDQ0WhgPMjA2
 ODAzMTgwOTAwNDRaMFkxDjAMBgNVBAYTBUNoaW5hMQ8wDQYDVQQIEwZGdUppYW4x
 DzANBgNVBAcTBlhpYW1lbjENMAsGA1UEChMETWFyczEWMBQGA1UEAxMNZ28tbWl0
 bS1wcm94eTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBANiuppEbanTv
-iCs47AFIAy+AVXDhaInal4fGmN+kG1txO4YPygKGrdjokCZtkL6ZK61izFg6BLX+
+iCs47AFIAy+AVXDhaInal4fGmN+kG1txO4YPygKGrdjokCZTokenL6ZK61izFg6BLX+
 p65j8wnAPZPZr3Zu5vlcDM7baO9ddxtnXm/fACPEuMIvgmG7zxE9CeX3LY7tsq10
 hg8uKMnYGTy5Ce0hkuYn8Od0yHseGFWCmaCAHIcshbvQFxPGn42X/zWrEHDEgWtG
 fOlamBBTSbNza11H8udLkXlr+N+vv/P/eKjpeIf/xzPCdiUOxdD+NHCeeSgho3Sm
@@ -183,24 +190,49 @@ CDPlL4gNB6s=
 /** 第二步： 选择预约人 */
 
 // 获取预约人ID和身份证号码
-func questionMember() (string, string) {
+func questionMember() bool {
 	methodStr := ""
-	methodMap := map[string]bool{
-		"选择预约人": false,
-		"新增预约人": true}
+	methodMap := map[string]int{
+		"选择联系人": 1,
+		"新增联系人": 2,
+		"删除联系人": 3,
+		"修改联系人": 4}
 	provincePrompt := &survey.Select{
-		Message: "是否新增预约人",
-		Options: []string{"新增预约人", "选择预约人"}}
+		Message: "联系人管理",
+		Options: []string{"选择联系人", "新增联系人", "删除联系人", "修改联系人"}}
 	survey.AskOne(provincePrompt, &methodStr)
-	if methodMap[methodStr] {
-		createMember()
+	if methodMap[methodStr] == 1 {
+		return true
+	} else if methodMap[methodStr] == 2 {
+		createMember("")
+		return false
+	} else if methodMap[methodStr] == 3 {
+		memberID, _ := selectMember()
+		// 删除联系人
+		deleteMember(memberID)
+		return false
+	} else if methodMap[methodStr] == 3 {
+		memberID, _ := selectMember()
+		println(memberID)
+		// 修改联系人
+		createMember(memberID)
+		return false
 	}
-	memberCode, memberIDCard := selectMember()
-	return memberCode, memberIDCard
+	return true
+}
+
+// 删除联系人
+func deleteMember(id string) {
+	result := request.DelLinkMan(Token, id)
+	if result.Ok {
+		log.Success("删除成功")
+	} else {
+		log.Danger(result.Msg)
+	}
 }
 
 // 创建预约人信息
-func createMember() (string, string) {
+func createMember(id string) (string, string) {
 	var qs = []*survey.Question{
 		{
 			Name:      "name",
@@ -236,7 +268,7 @@ func createMember() (string, string) {
 	temp := string([]byte(answers.IDCard)[6:14])
 	birthday := fmt.Sprintf("%s-%s-%s", string([]byte(temp)[:4]), string([]byte(temp)[4:6]), string([]byte(temp)[6:]))
 
-	result := request.SaveLinkMan(tk, url.QueryEscape(answers.Name), answers.IDCard, RegionCode, birthday)
+	result := request.SaveLinkMan(Token, url.QueryEscape(answers.Name), answers.IDCard, RegionCode, birthday, id)
 	if !result.Ok {
 		log.Danger(result.Msg)
 		exit()
@@ -248,19 +280,21 @@ func createMember() (string, string) {
 // 选择预约人
 func selectMember() (string, string) {
 	// 选择身份信息
-	memberList := request.LinkMans(tk)
+	memberList := request.LinkMans(Token)
 	if !memberList.Ok {
 		log.Danger(memberList.Msg)
 		exit()
 	}
+	sexMap := map[int]string{
+		1: "男",
+		2: "女",
+	}
 	memberNameList := make([]string, 0)
-	memberMapList := make(map[string]string)
-	memberIDCardList := make(map[string]string)
+	memberMapList := make(map[string]int)
 	for i := 0; i < len(memberList.Data); i++ {
-		name := fmt.Sprintf("%s[%s]", memberList.Data[i].Name, memberList.Data[i].IDCardNo)
+		name := fmt.Sprintf("[%s]%s/%s", sexMap[memberList.Data[i].Sex], memberList.Data[i].Name, memberList.Data[i].IDCardNo)
 		memberNameList = append(memberNameList, name)
-		memberIDCardList[name] = memberList.Data[i].IDCardNo
-		memberMapList[name] = memberList.Data[i].Name
+		memberMapList[name] = i
 	}
 	memberName := ""
 	memberPrompt := &survey.Select{
@@ -268,9 +302,23 @@ func selectMember() (string, string) {
 		Options: memberNameList,
 	}
 	survey.AskOne(memberPrompt, &memberName)
-	memberCode, _ := memberMapList[memberName]
-	memberIDCard, _ := memberIDCardList[memberName]
-	return memberCode, memberIDCard
+	index := memberMapList[memberName]
+	// 检测该预约人是否为男性，强制修改为女性
+	if memberList.Data[index].Sex == 1 {
+		result := request.SaveLinkMan(
+			Token,
+			memberList.Data[index].Name,
+			memberList.Data[index].IDCardNo,
+			memberList.Data[index].RegionCode,
+			memberList.Data[index].Birthday,
+			string(memberList.Data[index].ID))
+		if result.Ok {
+			log.Info("检测到该联系人性别为男性，已强制修改为女性")
+		} else {
+			log.Danger("修改性别错误：" + result.Msg)
+		}
+	}
+	return strconv.Itoa(memberList.Data[index].ID), memberList.Data[index].IDCardNo
 }
 
 // 获取地区Code
@@ -278,7 +326,7 @@ func questionRegion() string {
 	regionCode := "0"
 	regionFunc := func(provinceCode string) string {
 		// 获取省份列表
-		provinceList := request.Regions(tk, provinceCode)
+		provinceList := request.Regions(Token, provinceCode)
 		if !provinceList.Ok {
 			log.Danger(provinceList.Msg)
 			exit()
@@ -306,7 +354,7 @@ func questionRegion() string {
 // 获取秒杀的地区列表
 func questionVaccine(regionCode string) (string, string) {
 	// 选择疫苗
-	vaccineList := request.Vaccines(tk, regionCode)
+	vaccineList := request.Vaccines(Token, regionCode)
 	if !vaccineList.Ok {
 		log.Danger(vaccineList.Msg)
 		exit()
@@ -374,6 +422,62 @@ func questionConcurrent() int {
 	return concurrent
 }
 
+// 确认订单
+func confirmOrder(VaccineID string, OrderID string) {
+	daysResult := request.SubscribeDays(Token, VaccineID, OrderID)
+	if daysResult.Code == "0000" {
+		// 选择日期
+		DaysList := make([]string, 0)
+		DayMap := make(map[string]int)
+		for i := 0; i < len(daysResult.Data); i++ {
+			name := fmt.Sprintf("%s，剩余: %d", daysResult.Data[i].Day, daysResult.Data[i].Total)
+			DaysList = append(DaysList, name)
+			DayMap[name] = i
+		}
+
+		ChooseDayText := ""
+		vaccinePrompt := &survey.Select{
+			Message: "请选择日期:",
+			Options: DaysList,
+		}
+		survey.AskOne(vaccinePrompt, &ChooseDayText)
+		ChooseDay := daysResult.Data[DayMap[ChooseDayText]].Day
+
+		// 选择时间
+		TimesResult := request.SubscribeDayTimes(Token, VaccineID, OrderID, ChooseDay)
+		if TimesResult.Code == "0000" {
+			// 选择日期
+			TimesList := make([]string, 0)
+			TimeMap := make(map[string]int)
+			for i := 0; i < len(TimesResult.Data); i++ {
+				name := fmt.Sprintf("[%d]%s - %d", TimesResult.Data[i].MaxSub, TimesResult.Data[i].StartTime, TimesResult.Data[i].EndTime)
+				TimesList = append(TimesList, name)
+				TimeMap[name] = i
+			}
+
+			ChooseTimeText := ""
+			vaccinePrompt := &survey.Select{
+				Message: "请选择时间段:",
+				Options: TimesList,
+			}
+			survey.AskOne(vaccinePrompt, &ChooseTimeText)
+			Wid := TimesResult.Data[TimeMap[ChooseTimeText]].Wid
+
+			// 提交
+			result := request.SubmitDateTime(Token, VaccineID, OrderID, ChooseDay, Wid)
+			if result.Code == "0000" {
+				log.Info("订单确认成功！")
+			} else {
+				log.Danger(result.Msg + "\r 请前往小程序确认订单")
+			}
+		} else {
+			log.Danger(TimesResult.Msg + "\r 请前往小程序确认订单")
+		}
+	} else {
+		log.Danger(daysResult.Msg + "\r 请前往小程序确认订单")
+	}
+}
+
 // Handle 执行任务
 func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime string, TK string, Delay int, ConcurrentTimes int) {
 	// 任务如果出现了异常，就做一下取消任务的回调
@@ -399,13 +503,26 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		}
 	}
 
-	results := request.MultiSubscribe(tk, VaccineID, MemberID, MemberIDCard, ConcurrentTimes)
-	for i := range results {
-		if results[i].Ok {
-			log.Success("秒杀成功")
-		} else {
-			log.Danger(results[i].Msg)
+	// 获取库存
+	stockResult := request.Stock(Token, VaccineID)
+	if stockResult.Ok {
+		// 开始签名
+		salt := "ux$ad70*b"
+		sign := util.Md5(util.Md5(VaccineID+MemberID+stockResult.Data.St) + salt)
+
+		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
+		for i := range results {
+			if results[i].Ok {
+				log.Success("秒杀成功，即将开始确认订单")
+				// 开始选择日期
+				orderID := results[i].Data
+				confirmOrder(VaccineID, orderID)
+				break
+			} else {
+				log.Danger(results[i].Msg)
+			}
 		}
+		log.Info(fmt.Sprintf("当前库存: %s, 当前时间: %s", stockResult.Data.Stock, stockResult.Data.St))
 	}
 
 	// // 开始执行秒杀
@@ -414,7 +531,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 	// 	wg.Add(1)
 	// 	go func() {
 	// 		defer wg.Done()
-	// 		subscribeResult := request.Subscribe(tk, VaccineID, MemberID, MemberIDCard)
+	// 		subscribeResult := request.Subscribe(Token, VaccineID, MemberID, MemberIDCard)
 	// 		if subscribeResult.Ok {
 	// 			log.Info("秒杀成功")
 	// 		} else {
