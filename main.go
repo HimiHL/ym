@@ -11,8 +11,13 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"time"
+
+	"github.com/AlecAivazis/survey/v2"
+)
 
 // Token 请求Token
+var Token string
 
 func main() {
 	util.LogFileName = strconv.FormatInt(util.TimestampNow(), 10)
