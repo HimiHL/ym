@@ -139,11 +139,10 @@ func StopProxy() {
 
 func startProxy() {
 	c := color.New(color.FgHiBlue)
-	content := fmt.Sprintf("第一步：%s\n第二步：%s\n第三步：%s\n切记：%s",
-		"登录电脑微信并打开`约苗`公众号或`秒苗`小程序",
-		"点击公众号第一个菜单栏`疫苗预约`进入网页",
-		"进入网页后返回当前窗口，如提示选择预约人则关闭微信打开的网页窗口",
-		"关闭网页窗口后千万不可再次进入约苗的网页了，否则会导致任务失效！！！")
+	content := fmt.Sprintf("第一步：%s\n第二步：%s\n切记：%s",
+		"登录电脑微信并打开`约苗`公众号网页或`秒苗`小程序",
+		"进入后返回当前窗口，如提示选择预约人则关闭微信打开的窗口",
+		"关闭窗口后千万不可再次进入约苗/秒苗了，否则会导致Token失效！！！")
 	c.Println(content)
 	proxy := goproxy.New(goproxy.WithDecryptHTTPS(&Cache{}), goproxy.WithDelegate(&EventHandler{}))
 	server = &http.Server{

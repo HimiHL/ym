@@ -1,11 +1,13 @@
 package log
 
 import (
-	"github.com/fatih/color"
-	"time"
 	"fmt"
 	"miaomiao/util"
+	"time"
+
+	"github.com/fatih/color"
 )
+
 // Success 绿色日志
 func Success(str string) {
 	c := color.New(color.FgGreen)
@@ -13,6 +15,7 @@ func Success(str string) {
 	c.Println(content)
 	util.Log(content)
 }
+
 // Info 蓝色日志
 func Info(str string) {
 	c := color.New(color.FgHiBlue)
@@ -20,6 +23,7 @@ func Info(str string) {
 	c.Println(content)
 	util.Log(content)
 }
+
 // Danger 红色日志
 func Danger(str string) {
 	c := color.New(color.FgRed)
