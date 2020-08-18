@@ -504,6 +504,15 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 	}
 
 	// 获取库存
+	/**
+		Stock这个接口是否可以提前调用是一个问题
+
+		既然采用了md5不可逆的加密，肯定在stock接口里，服务器端做了缓存，记录了最后一次请求时间
+
+		// 问题是服务器端会不会去校验这个请求时间是否超过秒杀时间(比如12点开始秒杀，11点59分59秒之前的st都无效)
+		// 等抢到一个了再试试
+
+	**/
 	stockResult := request.Stock(Token, VaccineID)
 	if stockResult.Ok {
 		// 开始签名
@@ -515,7 +524,6 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		暂时不确定是连接字符串还是求和
 		*/
 		sign := util.Md5(util.Md5(VaccineID+MemberID+stockResult.Data.St) + salt)
-
 		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
 		for i := range results {
 			if results[i].Ok {

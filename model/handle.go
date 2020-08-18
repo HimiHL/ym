@@ -44,14 +44,14 @@ type TimeNowModel struct {
 	Code  string `json:"code"`
 	Data  int64  `json:"data"`
 	Ok    bool   `json:"ok"`
-	Msg   string `json:msg`
+	Msg   string `json:"msg"`
 	NotOk bool   `json:"notOk"`
 }
 
-// ResponseModel 服务器当前时间
+// StockModel 检查库存接口
 type StockModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Ok   bool   `json:"ok"`
 	Data struct {
 		St    string `json:"st"`
@@ -60,11 +60,11 @@ type StockModel struct {
 	NotOk bool `json:"notOk"`
 }
 
-// SubscribeModel 服务器当前时间
+// ResponseModel 基础响应
 type ResponseModel struct {
 	Code  string `json:"code"`
 	Data  string `json:"data"`
-	Msg   string `json:msg`
+	Msg   string `json:"msg"`
 	Ok    bool   `json:"ok"`
 	NotOk bool   `json:"notOk"`
 }
@@ -72,7 +72,7 @@ type ResponseModel struct {
 // RegionsModel 地区信息接口
 type RegionsModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Data []struct {
 		Name  string `json:"name"`
 		Value string `json:"value"`
@@ -83,7 +83,7 @@ type RegionsModel struct {
 // LinkMansModel 预约人列表接口
 type LinkMansModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Data []struct {
 		ID           int    `json:"id"`
 		UserID       int    `json:"userId"`
@@ -106,7 +106,7 @@ type LinkMansModel struct {
 // SubscribeDaysModel 秒杀选择日期接口
 type SubscribeDaysModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Data []struct {
 		Day   string `json:"day"`
 		Total int    `json:"total"`
@@ -118,7 +118,7 @@ type SubscribeDaysModel struct {
 // SubscribeDayTimesModel 秒杀选择时间接口
 type SubscribeDayTimesModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Data []struct {
 		Wid       string `json:"wid"`
 		StartTime string `json:"startTime"`
@@ -129,9 +129,10 @@ type SubscribeDayTimesModel struct {
 	NotOk bool `json:"notOk"`
 }
 
+// VaccinesModel 秒杀详情接口
 type VaccinesModel struct {
 	Code string `json:"code"`
-	Msg  string `json:msg`
+	Msg  string `json:"msg"`
 	Data []struct {
 		ID          int    `json:"id"`
 		Name        string `json:"name"`

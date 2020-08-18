@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ouqiang/goproxy"
 	"github.com/fatih/color"
+	"github.com/ouqiang/goproxy"
 )
 
 // Cache 实现证书缓存接口
@@ -146,7 +146,7 @@ func StopProxy() {
 
 func startProxy() {
 	c := color.New(color.FgHiBlue)
-	content := fmt.Sprintf("第一步：%s\n第二步：%s\n第三步：%s\n切记：%s",
+	content := fmt.Sprintf("第一步：%s\n第二步：%s\n切记：%s",
 		"登录电脑微信并打开`约苗`公众号网页或`秒苗`小程序",
 		"进入后返回当前窗口，如提示选择预约人则关闭微信打开的窗口",
 		"关闭窗口后千万不可再次进入约苗/秒苗了，否则会导致Token失效！！！")
