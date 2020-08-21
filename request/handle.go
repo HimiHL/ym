@@ -113,7 +113,7 @@ func Vaccines(token string, regionCode string) model.VaccinesModel {
 func Subscribe(token string, id string, linkmanID string, idCard string) model.ResponseModel {
 	var response model.ResponseModel
 	route := fmt.Sprintf("%s?seckillId=%s&vaccineIndex=1&linkmanId=%s&idCardNo=%s", model.APISubscribe, id, linkmanID, idCard)
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, true)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -122,7 +122,7 @@ func Subscribe(token string, id string, linkmanID string, idCard string) model.R
 func Stock(token string, id string) model.StockModel {
 	var response model.StockModel
 	route := fmt.Sprintf("%s?id=%s", model.APICheckStock, id)
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, true)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
