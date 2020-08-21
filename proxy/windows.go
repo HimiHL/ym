@@ -11,7 +11,7 @@ import (
 
 func openNetworkProxyWin() {
 	backup()
-	SetProxy("127.0.0.1:9998")
+	SetProxy("127.0.0.1:9000")
 }
 
 func CloseNetworkProxyWin() {

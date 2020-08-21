@@ -146,7 +146,7 @@ func startProxy() {
 	c.Println(content)
 	proxy := goproxy.New(goproxy.WithDecryptHTTPS(&Cache{}), goproxy.WithDelegate(&EventHandler{}))
 	server = &http.Server{
-		Addr:         ":9998",
+		Addr:         ":9000",
 		Handler:      proxy,
 		ReadTimeout:  1 * time.Minute,
 		WriteTimeout: 1 * time.Minute,
