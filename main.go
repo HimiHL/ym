@@ -21,6 +21,8 @@ var Token string
 
 func main() {
 	util.LogFileName = strconv.FormatInt(util.TimestampNow(), 10)
+	log.Danger("日志文件名：" + util.LogFileName + ".log")
+
 	// 获取本地与服务器的时间差
 	timeNotice()
 	log.Danger("操作方式：方向键上下键选择，回车键确认选中")
@@ -32,10 +34,11 @@ func main() {
 	for !questionMember() {
 
 	}
+	// Token = "wxtoken:08dd80b5572d3f4827dd33b692c4b439_929ca8ef575621b739e8844aeadfc284"
 	// 获取预约人信息
 	MemberID, MemberIDCard := selectMember()
 	// 选择地区
-	RegionCode := questionRegion()
+	RegionCode := selectRegion()
 	// 选择门诊
 	VaccineID, StartTime := questionVaccine(RegionCode)
 	// 设置提前时间
@@ -261,7 +264,7 @@ func selectMember() (string, string) {
 			memberList.Data[index].IDCardNo,
 			memberList.Data[index].RegionCode,
 			memberList.Data[index].Birthday,
-			string(memberList.Data[index].ID))
+			strconv.Itoa(memberList.Data[index].ID))
 		if result.Ok {
 			log.Info("检测到该联系人性别为男性，已强制修改为女性")
 		} else {
@@ -301,6 +304,22 @@ func questionRegion() string {
 	return cityCode
 }
 
+func selectRegion() string {
+	methodStr := ""
+	methodMap := map[string]bool{
+		"四川成都": false,
+		"其他地区": true}
+	provincePrompt := &survey.Select{
+		Message: "请选择地区",
+		Options: []string{"四川成都", "其他地区"}}
+	survey.AskOne(provincePrompt, &methodStr)
+	if methodMap[methodStr] {
+		return questionRegion()
+	} else {
+		return "5101"
+	}
+}
+
 // 获取秒杀的地区列表
 func questionVaccine(regionCode string) (string, string) {
 	// 选择疫苗
@@ -313,14 +332,12 @@ func questionVaccine(regionCode string) (string, string) {
 		log.Danger("没有可以秒杀的门诊")
 		exit()
 	}
-	vaccineMapList := make(map[string]string)
-	vaccineStartTimeMapList := make(map[string]string)
+	vaccineMapList := make(map[string]int)
 	vaccineNameList := make([]string, 0)
 	for i := 0; i < len(vaccineList.Data); i++ {
 		key := vaccineList.Data[i].Name + "[" + vaccineList.Data[i].StartTime + "]"
 		vaccineNameList = append(vaccineNameList, key)
-		vaccineMapList[key] = string(vaccineList.Data[i].ID)
-		vaccineStartTimeMapList[key] = vaccineList.Data[i].StartTime
+		vaccineMapList[key] = i
 	}
 	vaccineName := ""
 	vaccinePrompt := &survey.Select{
@@ -328,9 +345,9 @@ func questionVaccine(regionCode string) (string, string) {
 		Options: vaccineNameList,
 	}
 	survey.AskOne(vaccinePrompt, &vaccineName)
-	vaccineID, _ := vaccineMapList[vaccineName]
-	vaccineStartTime, _ := vaccineStartTimeMapList[vaccineName]
-	return vaccineID, vaccineStartTime
+	vaccineID := vaccineList.Data[vaccineMapList[vaccineName]].ID
+	vaccineStartTime := vaccineList.Data[vaccineMapList[vaccineName]].StartTime
+	return strconv.Itoa(vaccineID), vaccineStartTime
 }
 
 // 获取提前时间
@@ -444,7 +461,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 	log.Danger(fmt.Sprintf("开始毫秒时间戳：%s", strconv.FormatInt(startTimeMillSecond, 10)))
 
 	// 开始倒计时
-	for range time.Tick(10 * time.Millisecond) {
+	for range time.Tick(5 * time.Millisecond) {
 		// 如果当前时间+提前时间已经超过了秒杀时间，跳出循环
 		if util.TimestampNow()+int64(Delay) >= startTimeMillSecond {
 			break
@@ -463,6 +480,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		// 等抢到一个了再试试
 
 	**/
+	log.Info("开始秒杀")
 	stockResult := request.Stock(Token, VaccineID)
 	if stockResult.Ok {
 		// 开始签名
@@ -474,6 +492,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		暂时不确定是连接字符串还是求和
 		*/
 		sign := util.Md5(util.Md5(VaccineID+MemberID+stockResult.Data.St) + salt)
+		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", VaccineID, MemberID, stockResult.Data.St, salt, sign))
 		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
 		for i := range results {
 			if results[i].Ok {
@@ -487,6 +506,8 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 			}
 		}
 		log.Info(fmt.Sprintf("当前库存: %s, 当前时间: %s", stockResult.Data.Stock, stockResult.Data.St))
+	} else {
+		log.Danger(stockResult.Msg)
 	}
 
 	// // 开始执行秒杀
