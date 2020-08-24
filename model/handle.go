@@ -54,8 +54,8 @@ type StockModel struct {
 	Msg  string `json:"msg"`
 	Ok   bool   `json:"ok"`
 	Data struct {
-		St    string `json:"st"`
-		Stock string `json:"stock"`
+		St    int `json:"st"`
+		Stock int `json:"stock"`
 	} `json:"data"`
 	NotOk bool `json:"notOk"`
 }

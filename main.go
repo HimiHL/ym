@@ -540,8 +540,8 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		但是！因为VaccineID是从页面路由上拿到的，所以VaccineID是string，在JS弱类型语言中，第一个是string，所以会变成连接字符串
 		暂时不确定是连接字符串还是求和
 		*/
-		sign := util.Md5(util.Md5(VaccineID+MemberID+stockResult.Data.St) + salt)
-		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", VaccineID, MemberID, stockResult.Data.St, salt, sign))
+		sign := util.Md5(util.Md5(VaccineID+MemberID+strconv.Itoa(stockResult.Data.St)) + salt)
+		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", VaccineID, MemberID, strconv.Itoa(stockResult.Data.St), salt, sign))
 		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
 		for i := range results {
 			if results[i].Ok {
