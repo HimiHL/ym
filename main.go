@@ -23,6 +23,8 @@ import (
 var Token string
 
 func main() {
+	log.Danger("版本号：20200914")
+
 	util.LogFileName = strconv.FormatInt(util.TimestampNow(), 10)
 	log.Danger("日志文件名：" + util.LogFileName + ".log")
 
