@@ -556,7 +556,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 				log.Danger(results[i].Msg)
 			}
 		}
-		log.Info(fmt.Sprintf("当前库存: %s, 当前时间: %s", stockResult.Data.Stock, stockResult.Data.St))
+		log.Info(fmt.Sprintf("当前库存: %d, 当前时间: %d", stockResult.Data.Stock, stockResult.Data.St))
 	} else {
 		log.Danger(stockResult.Msg)
 	}

@@ -18,7 +18,7 @@ var Domain = "https://miaomiao.scmttec.com"
 // TimeNow 当前服务器时间
 func TimeNow(token string) model.TimeNowModel {
 	var response model.TimeNowModel
-	jsonStr := GET(model.APITimeNow, token, false)
+	jsonStr := GET(model.APITimeNow, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -39,7 +39,7 @@ func TimeNowTest(token string, times int) []model.TimeNowModel {
 func Regions(token string, parentCode string) model.RegionsModel {
 	var response model.RegionsModel
 	route := fmt.Sprintf("%s?parentCode=%s", model.APIRegions, parentCode)
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -47,7 +47,7 @@ func Regions(token string, parentCode string) model.RegionsModel {
 // LinkMans 获取预约人联系列表
 func LinkMans(token string) model.LinkMansModel {
 	var response model.LinkMansModel
-	jsonStr := GET(model.APIGetLinkMan, token, false)
+	jsonStr := GET(model.APIGetLinkMan, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -56,7 +56,7 @@ func LinkMans(token string) model.LinkMansModel {
 func SubscribeDays(token string, id string, orderID string) model.SubscribeDaysModel {
 	var response model.SubscribeDaysModel
 	route := fmt.Sprintf("%s?id=%s&sid=%s", model.APISubscribeDays, id, orderID)
-	jsonStr := GET(route, token, true)
+	jsonStr := GET(route, token, true, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -65,7 +65,7 @@ func SubscribeDays(token string, id string, orderID string) model.SubscribeDaysM
 func SubscribeDayTimes(token string, id string, orderID string, day string) model.SubscribeDayTimesModel {
 	var response model.SubscribeDayTimesModel
 	route := fmt.Sprintf("%s?id=%s&sid=%s&day=%s", model.APISubscribeDayTimes, id, orderID, day)
-	jsonStr := GET(route, token, true)
+	jsonStr := GET(route, token, true, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -74,7 +74,7 @@ func SubscribeDayTimes(token string, id string, orderID string, day string) mode
 func SubmitDateTime(token string, id string, orderID string, day string, wid string) model.ResponseModel {
 	var response model.ResponseModel
 	route := fmt.Sprintf("%s?id=%s&sid=%s&day=%s&wid=%s", model.APISubmitDateTime, id, orderID, day, wid)
-	jsonStr := GET(route, token, true)
+	jsonStr := GET(route, token, true, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -86,7 +86,7 @@ func SaveLinkMan(token string, name string, idCard string, regionCode string, bi
 	if id != "" {
 		route += "&id=" + string(id)
 	}
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -95,7 +95,7 @@ func SaveLinkMan(token string, name string, idCard string, regionCode string, bi
 func DelLinkMan(token string, id string) model.ResponseModel {
 	var response model.ResponseModel
 	route := fmt.Sprintf("%s?id=%s", model.APIDelLinkMan, id)
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -104,16 +104,16 @@ func DelLinkMan(token string, id string) model.ResponseModel {
 func Vaccines(token string, regionCode string) model.VaccinesModel {
 	var response model.VaccinesModel
 	route := fmt.Sprintf("%s?regionCode=%s&offset=0&limit=50", model.APIVaccineList, regionCode)
-	jsonStr := GET(route, token, false)
+	jsonStr := GET(route, token, false, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
 
 // Subscribe 秒杀
-func Subscribe(token string, id string, linkmanID string, idCard string) model.ResponseModel {
+func Subscribe(token string, id string, linkmanID string, idCard string, sign string) model.ResponseModel {
 	var response model.ResponseModel
 	route := fmt.Sprintf("%s?seckillId=%s&vaccineIndex=1&linkmanId=%s&idCardNo=%s", model.APISubscribe, id, linkmanID, idCard)
-	jsonStr := GET(route, token, true)
+	jsonStr := GET(route, token, true, sign)
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -122,7 +122,7 @@ func Subscribe(token string, id string, linkmanID string, idCard string) model.R
 func Stock(token string, id string) model.StockModel {
 	var response model.StockModel
 	route := fmt.Sprintf("%s?id=%s", model.APICheckStock, id)
-	jsonStr := GET(route, token, true)
+	jsonStr := GET(route, token, true, "")
 	json.Unmarshal([]byte(jsonStr), &response)
 	return response
 }
@@ -141,7 +141,7 @@ func MultiSubscribe(token string, id string, linkmanID string, idCard string, ti
 }
 
 // GET 请求
-func GET(url string, tk string, debug bool) string {
+func GET(url string, tk string, debug bool, sign string) string {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -160,6 +160,7 @@ func GET(url string, tk string, debug bool) string {
 	request.Header.Set("Host", "miaomiao.scmttec.com")
 	request.Header.Set("Cookie", "")
 	request.Header.Set("tk", tk)
+	request.Header.Set("ecc-hs", sign)
 	request.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	request.Header.Set("Accept", "application/json, text/plain, */*")
 	request.Header.Set("Referer", "https://servicewechat.com/wxff8cad2e9bf18719/4/page-frame.html")
