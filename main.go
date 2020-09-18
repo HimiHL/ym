@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -21,6 +22,17 @@ import (
 
 // Token 请求Token
 var Token string
+
+type TaskData struct {
+	ID           string `json:"id"`
+	Token        string `json:"token"`
+	MemberID     string `json:"member_id"`
+	MemberIDCard string `json:"member_idcard"`
+	VaccineID    string `json:"vaccine_id"`
+	Timeout      int    `json:"timeout"`
+	Times        int    `json:"times"`
+	StartTime    string `json:"start_time"`
+}
 
 func main() {
 	log.Danger("版本号：20200914")
@@ -51,8 +63,20 @@ func main() {
 	Delay := questionDelay()
 	// 设置并发次数
 	Concurrent := questionConcurrent()
+
+	task := TaskData{
+		ID:           "0",
+		Token:        Token,
+		MemberID:     MemberID,
+		MemberIDCard: MemberIDCard,
+		VaccineID:    VaccineID,
+		Timeout:      Delay,
+		Times:        Concurrent,
+		StartTime:    StartTime,
+	}
+
 	// 开始秒杀
-	Handle(MemberID, MemberIDCard, VaccineID, StartTime, Token, Delay, Concurrent)
+	Handle(task)
 }
 
 func timeNotice() {
@@ -497,7 +521,7 @@ func confirmOrder(VaccineID string, OrderID string) {
 }
 
 // Handle 执行任务
-func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime string, TK string, Delay int, ConcurrentTimes int) {
+func Handle(task TaskData) {
 	// 任务如果出现了异常，就做一下取消任务的回调
 	defer func() {
 		if r := recover(); r != nil {
@@ -505,20 +529,15 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		}
 	}()
 
-	startTimeMillSecond := util.TimestampFormat(startTime)
-	log.Danger(fmt.Sprintf("提前(%s)毫秒执行秒杀：", strconv.Itoa(Delay)))
-	log.Danger(fmt.Sprintf("并发秒杀(%s)次", strconv.Itoa(ConcurrentTimes)))
-	log.Danger(fmt.Sprintf("开始时间：%s", startTime))
+	startTimeMillSecond := util.TimestampFormat(task.StartTime)
+	log.Danger(fmt.Sprintf("提前(%s)毫秒执行秒杀：", strconv.Itoa(task.Timeout)))
+	log.Danger(fmt.Sprintf("并发秒杀(%s)次", strconv.Itoa(task.Times)))
+	log.Danger(fmt.Sprintf("开始时间：%s", task.StartTime))
 	log.Danger(fmt.Sprintf("开始毫秒时间戳：%s", strconv.FormatInt(startTimeMillSecond, 10)))
 
-	// 开始倒计时
-	for range time.Tick(5 * time.Millisecond) {
-		// 如果当前时间+提前时间已经超过了秒杀时间，跳出循环
-		if util.TimestampNow()+int64(Delay) >= startTimeMillSecond {
-			break
-		} else {
-			fmt.Printf("\r%s", time.Now().Format("2006-01-02 15:04:05.000000"))
-		}
+	// 阻塞时间
+	if !CountDown(task) {
+		return
 	}
 
 	// 获取库存
@@ -532,7 +551,7 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 
 	**/
 	log.Info("开始秒杀")
-	stockResult := request.Stock(Token, VaccineID)
+	stockResult := request.Stock(Token, task.VaccineID)
 	if stockResult.Ok {
 		// 开始签名
 		salt := "ux$ad70*b"
@@ -542,15 +561,15 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 		但是！因为VaccineID是从页面路由上拿到的，所以VaccineID是string，在JS弱类型语言中，第一个是string，所以会变成连接字符串
 		暂时不确定是连接字符串还是求和
 		*/
-		sign := util.Md5(util.Md5(VaccineID+MemberID+strconv.Itoa(stockResult.Data.St)) + salt)
-		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", VaccineID, MemberID, strconv.Itoa(stockResult.Data.St), salt, sign))
-		results := request.MultiSubscribe(Token, VaccineID, MemberID, MemberIDCard, ConcurrentTimes, sign)
+		sign := util.Md5(util.Md5(task.VaccineID+task.MemberID+strconv.Itoa(stockResult.Data.St)) + salt)
+		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", task.VaccineID, task.MemberID, strconv.Itoa(stockResult.Data.St), salt, sign))
+		results := request.MultiSubscribe(Token, task.VaccineID, task.MemberID, task.MemberIDCard, task.Times, sign)
 		for i := range results {
 			if results[i].Ok {
 				log.Success("秒杀成功，即将开始确认订单")
 				// 开始选择日期
 				orderID := results[i].Data
-				confirmOrder(VaccineID, orderID)
+				confirmOrder(task.VaccineID, orderID)
 				break
 			} else {
 				log.Danger(results[i].Msg)
@@ -560,22 +579,35 @@ func Handle(MemberID string, MemberIDCard string, VaccineID string, startTime st
 	} else {
 		log.Danger(stockResult.Msg)
 	}
+}
 
-	// // 开始执行秒杀
-	// var wg sync.WaitGroup
-	// for i := 0; i < ConcurrentTimes; i++ {
-	// 	wg.Add(1)
-	// 	go func() {
-	// 		defer wg.Done()
-	// 		subscribeResult := request.Subscribe(Token, VaccineID, MemberID, MemberIDCard)
-	// 		if subscribeResult.Ok {
-	// 			log.Info("秒杀成功")
-	// 		} else {
-	// 			log.Danger("秒杀失败")
-	// 		}
-	// 	}()
-	// }
-	// wg.Wait()
+// CountDown 阻塞时间触发任务
+func CountDown(task TaskData) bool {
+	startTimestamp := util.TimestampFormat(task.StartTime)
+	d := time.Unix(startTimestamp/1000, int64(task.Timeout*1e6)) // 截止时间
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+
+	// Even though ctx will be expired, it is good practice to call its
+	// cancellation function in any case. Failure to do so may keep the
+	// context and its parent alive longer than necessary.
+	defer cancel()
+
+	for {
+		select {
+		case <-time.Tick(1 * time.Second):
+			diff := (util.TimestampNow() / 1e3) % 600
+			if diff == 0 {
+				// 开始检查Token是否有效
+				checkResult := request.Stock(task.Token, task.VaccineID)
+				if checkResult.Code == "1001" {
+					return false
+				}
+			}
+			fmt.Printf("\r%s", time.Now().Format("2006-01-02 15:04:05.000000"))
+		case <-ctx.Done():
+			return true
+		}
+	}
 }
 
 func exit() {
