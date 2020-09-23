@@ -536,7 +536,7 @@ func Handle(task TaskData) {
 	log.Danger(fmt.Sprintf("开始毫秒时间戳：%s", strconv.FormatInt(startTimeMillSecond, 10)))
 
 	// 阻塞时间
-	if !CountDown(task) {
+	if !CountDown(task, -40) {
 		return
 	}
 
