@@ -157,15 +157,16 @@ func GET(url string, tk string, debug bool, sign string) string {
 	if err != nil {
 		panic(err)
 	}
+	cookie := "_xxhm_=%7B%22headerImg%22%3A%22http%3A%2F%2Fthirdwx.qlogo.cn%2Fmmopen%2Fic9BcyRDyOIsAe7x0lQW4LnP7vycBzZvFHLsibia5r15vUkV95A3UQSR5wqf5licg0dyU4ibLeNUkbW70v3PPNfXJ2XfaLF7EhBnic%2F132%22%2C%22mobile%22%3A%22181****0102%22%2C%22nickName%22%3A%22%E9%BB%84%E6%B5%B7%E6%9E%97HHL%22%2C%22sex%22%3A2%7D;_xzkj_=" + tk
 	request.Header.Set("Host", "miaomiao.scmttec.com")
-	request.Header.Set("Cookie", "")
+	request.Header.Set("Cookie", cookie)
 	request.Header.Set("tk", tk)
 	request.Header.Set("ecc-hs", sign)
 	request.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	request.Header.Set("Accept", "application/json, text/plain, */*")
-	request.Header.Set("Referer", "https://servicewechat.com/wxff8cad2e9bf18719/4/page-frame.html")
+	request.Header.Set("Referer", "https://servicewechat.com/wxff8cad2e9bf18719/12/page-frame.html")
 	request.Header.Set("Accept-Language", "zh-cn")
-	request.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.8(0x17000820) NetType/4G Language/zh_CN")
+	request.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.15(0x17000f2d) NetType/4G Language/zh_CN")
 
 	result := []byte("")
 	resp, err := client.Do(request)
@@ -202,7 +203,7 @@ func MultiGet(url string, tk string, sign string, times int) []string {
 	request.Header.Set("ecc-hs", sign)
 	request.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	request.Header.Set("Accept", "application/json, text/plain, */*")
-	request.Header.Set("Referer", "https://servicewechat.com/wxff8cad2e9bf18719/4/page-frame.html")
+	request.Header.Set("Referer", "https://servicewechat.com/wxff8cad2e9bf18719/12/page-frame.html")
 	request.Header.Set("Accept-Language", "zh-cn")
 	request.Header.Set("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.8(0x17000820) NetType/4G Language/zh_CN")
 
