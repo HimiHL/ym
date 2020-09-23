@@ -550,7 +550,6 @@ func Handle(task TaskData) {
 		// 等抢到一个了再试试
 
 	**/
-	log.Info("开始秒杀")
 	stockResult := request.Stock(Token, task.VaccineID)
 	if stockResult.Ok {
 		// 开始签名
@@ -563,28 +562,54 @@ func Handle(task TaskData) {
 		*/
 		sign := util.Md5(util.Md5(task.VaccineID+task.MemberID+strconv.Itoa(stockResult.Data.St)) + salt)
 		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", task.VaccineID, task.MemberID, strconv.Itoa(stockResult.Data.St), salt, sign))
-		results := request.MultiSubscribe(Token, task.VaccineID, task.MemberID, task.MemberIDCard, task.Times, sign)
-		for i := range results {
-			if results[i].Ok {
-				log.Success("秒杀成功，即将开始确认订单")
-				// 开始选择日期
-				orderID := results[i].Data
-				confirmOrder(task.VaccineID, orderID)
-				break
-			} else {
-				log.Danger(results[i].Msg)
-			}
+
+		DeadLine(task.StartTime, task.Timeout)
+		result := request.Subscribe(task.Token, task.VaccineID, task.MemberID, task.MemberIDCard, sign)
+		if result.Ok {
+			log.Success("秒杀成功，即将开始确认订单")
+			// 开始选择日期
+			orderID := result.Data
+			confirmOrder(task.VaccineID, orderID)
+		} else {
+			log.Danger(result.Msg)
 		}
+
+		// results := request.MultiSubscribe(Token, task.VaccineID, task.MemberID, task.MemberIDCard, task.Times, sign)
+		// for i := range results {
+		// 	if results[i].Ok {
+		// 		log.Success("秒杀成功，即将开始确认订单")
+		// 		// 开始选择日期
+		// 		orderID := results[i].Data
+		// 		confirmOrder(task.VaccineID, orderID)
+		// 		break
+		// 	} else {
+		// 		log.Danger(results[i].Msg)
+		// 	}
+		// }
 		log.Info(fmt.Sprintf("当前库存: %d, 当前时间: %d", stockResult.Data.Stock, stockResult.Data.St))
 	} else {
 		log.Danger(stockResult.Msg)
 	}
 }
 
+// DeadLine 倒计时
+func DeadLine(date string, timeout int) {
+	d := time.Unix(util.TimestampFormat(date)/1000, int64(timeout*1e6)) // 截止时间
+	ctx, cancel := context.WithDeadline(context.Background(), d)
+	defer cancel()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
 // CountDown 阻塞时间触发任务
-func CountDown(task TaskData) bool {
+func CountDown(task TaskData, timeout int) bool {
 	startTimestamp := util.TimestampFormat(task.StartTime)
-	d := time.Unix(startTimestamp/1000, int64(task.Timeout*1e6)) // 截止时间
+	d := time.Unix(startTimestamp/1000, int64(timeout*1e6)) // 截止时间
 	ctx, cancel := context.WithDeadline(context.Background(), d)
 
 	// Even though ctx will be expired, it is good practice to call its
