@@ -48,11 +48,11 @@ func main() {
 	Token = questionToken()
 	// 打印Token
 	log.Success(Token)
+	// Token = "wxtoken:08dd80b5572d3f4827dd33b692c4b439_fc946552be1c06b7a462013de6714e16"
 	// 选择联系人的操作方式
 	for !questionMember() {
 
 	}
-	// Token = "wxtoken:08dd80b5572d3f4827dd33b692c4b439_929ca8ef575621b739e8844aeadfc284"
 	// 获取预约人信息
 	MemberID, MemberIDCard := selectMember()
 	// 选择地区
@@ -74,6 +74,17 @@ func main() {
 		Times:        Concurrent,
 		StartTime:    StartTime,
 	}
+
+	// task := TaskData{
+	// 	ID:           "0",
+	// 	Token:        Token,
+	// 	MemberID:     "6136422",
+	// 	MemberIDCard: "513424199607220920",
+	// 	VaccineID:    "694",
+	// 	Timeout:      960,
+	// 	Times:        1,
+	// 	StartTime:    "2020-09-25 14:19:00",
+	// }
 
 	// 开始秒杀
 	Handle(task)
@@ -540,6 +551,8 @@ func Handle(task TaskData) {
 		return
 	}
 
+	log.Success("开始秒杀")
+
 	// 获取库存
 	/**
 		Stock这个接口是否可以提前调用是一个问题
@@ -564,7 +577,7 @@ func Handle(task TaskData) {
 		log.Info(fmt.Sprintf("签名字符串: %s + %s + %s + %s = %s", task.VaccineID, task.MemberID, strconv.Itoa(stockResult.Data.St), salt, sign))
 
 		DeadLine(task.StartTime, task.Timeout)
-		result := request.Subscribe(task.Token, task.VaccineID, task.MemberID, task.MemberIDCard, sign)
+		result := request.Subscribe(task.Token, task.VaccineID, task.MemberID, task.MemberIDCard, sign, stockResult.Cookie)
 		if result.Ok {
 			log.Success("秒杀成功，即将开始确认订单")
 			// 开始选择日期
@@ -574,18 +587,6 @@ func Handle(task TaskData) {
 			log.Danger(result.Msg)
 		}
 
-		// results := request.MultiSubscribe(Token, task.VaccineID, task.MemberID, task.MemberIDCard, task.Times, sign)
-		// for i := range results {
-		// 	if results[i].Ok {
-		// 		log.Success("秒杀成功，即将开始确认订单")
-		// 		// 开始选择日期
-		// 		orderID := results[i].Data
-		// 		confirmOrder(task.VaccineID, orderID)
-		// 		break
-		// 	} else {
-		// 		log.Danger(results[i].Msg)
-		// 	}
-		// }
 		log.Info(fmt.Sprintf("当前库存: %d, 当前时间: %d", stockResult.Data.Stock, stockResult.Data.St))
 	} else {
 		log.Danger(stockResult.Msg)

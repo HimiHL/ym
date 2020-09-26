@@ -57,7 +57,8 @@ type StockModel struct {
 		St    int `json:"st"`
 		Stock int `json:"stock"`
 	} `json:"data"`
-	NotOk bool `json:"notOk"`
+	NotOk  bool `json:"notOk"`
+	Cookie string
 }
 
 // ResponseModel 基础响应
@@ -145,4 +146,20 @@ type VaccinesModel struct {
 	} `json:"data"`
 	Ok    bool `json:"ok"`
 	NotOk bool `json:"notOk"`
+}
+
+// TaskResponseMessage 任务响应数据格式
+type TaskResponseMessage struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+// RequestModel 请求参数配置
+type RequestModel struct {
+	Token  string
+	Route  string
+	Sign   string
+	Cookie string
+	Debug  bool
 }
