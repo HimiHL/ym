@@ -49,13 +49,11 @@ func MapKeys(m map[string]int) []string {
 
 // Log 写入日志
 func Log(str string) {
-	data := []byte(str + "\n")
-	f, err := os.OpenFile(LogFileName+".log", os.O_RDWR|os.O_CREATE, 0644)
+	data := str + "\n"
+	f, err := os.OpenFile(LogFileName+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
-		println("写入日志文件出错: ", err.Error())
-	} else {
-		n, _ := f.Seek(0, 2)
-		_, err = f.WriteAt(data, n)
+		println("打开日志文件出错: ", err.Error())
 	}
+	_, err = f.WriteString(data)
 	defer f.Close()
 }

@@ -136,7 +136,15 @@ func questionToken() string {
 	if methodMap[methodStr] {
 		return inputToken()
 	} else {
-		installCrt()
+		// 检查是否已经安装了证书
+		res, cErr := proxy.Cmd("security find-certificate -a -c go-mitm-proxy")
+		if cErr != nil {
+			log.Danger("检查证书时出现了错误: " + cErr.Error())
+			exit()
+		}
+		if len(res) == 0 {
+			installCrt()
+		}
 		network := selectNetwork()
 		return proxy.Handle(network)
 	}
@@ -181,7 +189,7 @@ func inputToken() string {
 
 // installCrt 安装TLS证书
 func installCrt() {
-	log.Danger("开始安装TLS证书")
+	log.Info("开始安装TLS证书")
 	content := []byte(`-----BEGIN CERTIFICATE-----
 MIIFdDCCA1ygAwIBAgIBATANBgkqhkiG9w0BAQsFADBZMQ4wDAYDVQQGEwVDaGlu
 YTEPMA0GA1UECBMGRnVKaWFuMQ8wDQYDVQQHEwZYaWFtZW4xDTALBgNVBAoTBE1h
